@@ -144,17 +144,21 @@ const server = http.createServer((request, response) => {
     await page.locator('#showOverviewCalendar').click();
     await activeMain('view-overview-calendar');
     await page.locator('#overviewCalendarGrid [data-date="2026-10-18"]').click();
-    await page.locator('#overviewDayMembers .overview-day-selected').click();
+    assert.equal(await page.locator('#overviewDayEntryDialog').evaluate(element => element.open), true, 'Calendar day should open the daily entry directly');
     assert.equal(await page.locator('#detail').evaluate(element => element.open), false, 'Daily entry must not open basic member information');
-    assert.equal(await page.locator('#overviewDayEntryDialog').evaluate(element => element.open), true);
     assert.match(await page.locator('#overviewDayEntryTitle').textContent(), /2026年10月18日/);
     assert.equal(await page.locator('#overviewDayEntryMembers .overview-day-row').count(), 1);
+    await page.locator('#overviewDayEntryMembers .overview-day-memo-button').click();
+    assert.equal(await page.locator('#dayMemoDialog').evaluate(element => element.open), true, 'Member memo should open directly over daily entry');
+    await page.locator('#dayMemoText').fill('日別メモの確認');
+    await page.locator('#dayMemoForm button[type="submit"]').click();
+    assert.equal(await page.locator('#overviewDayEntryDialog').evaluate(element => element.open), true, 'Saving memo should return to daily entry');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('member-management-v1')).members[0].dayMemos['2026-10-18'].text), '日別メモの確認');
     const input = page.locator('#overviewDayEntryMembers input').nth(1);
     await input.fill('3');
     await page.locator('#saveOverviewDayMetrics').click();
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('member-management-v1')).members[0].dailyMetrics['2026-10-18'].freebacks), 3);
     console.log('PASS: selected date/member opens daily entry directly and saves the correct date');
-    await page.locator('#closeOverviewDay').click();
 
     await page.setViewportSize({ width: 844, height: 390 });
     await activeMain('view-overview-calendar');
