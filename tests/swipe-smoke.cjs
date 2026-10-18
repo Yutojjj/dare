@@ -61,6 +61,11 @@ const server = http.createServer((request, response) => {
       assert.ok(Math.abs(geometry.x) < 1, id + ' must align with its viewport');
       assert.ok(Math.abs(geometry.width - geometry.viewportWidth) < 1, id + ' must fill its viewport');
     }
+    async function screenshot(name) {
+      if (!process.env.SWIPE_SCREENSHOT_DIR) return;
+      fs.mkdirSync(process.env.SWIPE_SCREENSHOT_DIR, { recursive: true });
+      await page.screenshot({ path: path.join(process.env.SWIPE_SCREENSHOT_DIR, name) });
+    }
     async function touch(x, y, type) {
       await session.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' || type === 'touchCancel' ? [] : [{ x, y }] });
     }
@@ -99,6 +104,7 @@ const server = http.createServer((request, response) => {
     for (let index = 0; index < 3; index++) {
       await swipe('#main', '#' + views[index], 1, { screenshot: index === 0 });
       await activeMain(views[index + 1]);
+      if (index === 0) await screenshot('calendar-settled.png');
     }
     for (let index = 3; index > 0; index--) {
       await swipe('#main', '#' + views[index], -1);
@@ -115,11 +121,13 @@ const server = http.createServer((request, response) => {
     await page.locator('#overviewAnalysisCards .overview-card').click();
     await page.locator('#analysisCards .analysis-card').first().waitFor();
     assert.equal(await page.locator('.detail-nav [aria-current="page"]').getAttribute('data-target'), 'analysis');
+    await screenshot('analysis-settled.png');
     const detailIds = ['detail-basic', 'detail-calendar', 'detail-customers', 'detail-analysis'];
     for (let index = 3; index > 0; index--) {
       await swipe('#detailContent', '#' + detailIds[index], -1, { screenshot: index === 3 });
       assert.equal(await page.locator('.detail-nav [aria-current="page"]').getAttribute('data-target'), detailIds[index - 1].replace('detail-', ''));
     }
+    await screenshot('basic-settled.png');
     const detailBox = await page.locator('#detailContent').boundingBox();
     await page.mouse.move(detailBox.x + detailBox.width / 2, detailBox.y + detailBox.height / 2);
     await page.mouse.wheel(0, 450);
@@ -153,8 +161,36 @@ const server = http.createServer((request, response) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await activeMain('view-overview-calendar');
     assert.equal(await page.locator('#main').evaluate(element => element.getBoundingClientRect().bottom <= document.querySelector('.directory-nav').getBoundingClientRect().top + 1), true);
-    await context.close();
     console.log('PASS: rotation preserves page alignment and clears the bottom navigation');
+
+    await page.mouse.move(320, 300);
+    await page.mouse.down();
+    await page.mouse.move(100, 300, { steps: 10 });
+    await page.mouse.up();
+    await activeMain('view-all-customers');
+    await page.mouse.wheel(100, 0);
+    await activeMain('view-overview-analysis');
+    console.log('PASS: mouse dragging and horizontal touchpad scrolling change pages');
+
+    await page.evaluate(() => { window.print = () => { window.testPrintOpened = true; }; });
+    await page.locator('#printOverviewAnalysis').click();
+    await page.locator('#analysisPrintDialog button[type="submit"]').click();
+    await page.waitForFunction(() => window.testPrintOpened === true);
+    await page.emulateMedia({ media: 'print' });
+    const printLayout = await page.locator('#analysisPrintRoot').evaluate(element => {
+      const grid = element.querySelector('.analysis-print-grid');
+      const style = getComputedStyle(grid);
+      return { rootDisplay: getComputedStyle(element).display, mainDisplay: getComputedStyle(document.getElementById('main')).display,
+        columns: style.gridTemplateColumns.split(' ').length, rows: style.gridTemplateRows.split(' ').length, height: grid.getBoundingClientRect().height };
+    });
+    assert.equal(printLayout.rootDisplay, 'block');
+    assert.equal(printLayout.mainDisplay, 'none');
+    assert.equal(printLayout.columns, 3); assert.equal(printLayout.rows, 3);
+    assert.ok(printLayout.height > 900, 'The A4 print grid must retain its full page height');
+    await page.emulateMedia({ media: null });
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await context.close();
+    console.log('PASS: A4 print layout still uses a full-height 3 by 3 grid');
 
     for (const options of [{ installed: true }, { standalone: true }]) {
       const app = await open({ ...options, dismissInstall: false });
