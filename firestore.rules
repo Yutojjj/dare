@@ -1,6 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Shared app state is intentionally accessible without login.
+    match /shared/{documentId} {
+      allow read, write: if documentId == 'main';
+    }
+
+    // Keep access to existing per-device data so it can seed the shared document.
     match /users/{userId}/appState/{documentId} {
       allow read, write: if request.auth != null
         && request.auth.uid == userId
