@@ -465,7 +465,7 @@ function openMemberAnalysis(id){
  const member=state.members.find(item=>item.id===id);if(!member)return;
  ++analysisRenderToken;activeId=id;memberDraft=null;loadedMonth=null;currentData={};
  $('detailName').textContent=member.name;$('detailAvatar').textContent=initial(member.name);
- $('rankButton').hidden=false;$('memoButton').hidden=false;renderRank();
+ $('rankButton').hidden=false;renderRank();
  $('analysisCards').replaceChildren();$('analysisRangeLabel').textContent='';
  if(!$('detail').open)$('detail').showModal();
  document.querySelectorAll('.detail-page').forEach(page=>page.scrollTop=0);
@@ -477,7 +477,7 @@ function openDetail(id,initialView='basic'){
  if(initialView==='analysis'){openMemberAnalysis(id);return}
  memberDraft=structuredClone(member.months||{});currentData={};loadedMonth=null;
  $('detailName').textContent=member.name;$('detailAvatar').textContent=initial(member.name);
- $('rankButton').hidden=false;$('memoButton').hidden=false;renderRank();
+ $('rankButton').hidden=false;renderRank();
  $('monthInput').value=monthNow();showMonth();
  if(!$('detail').open)$('detail').showModal();
  document.querySelectorAll('.detail-page').forEach(page=>page.scrollTop=0);
