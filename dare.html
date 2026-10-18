@@ -230,7 +230,7 @@ function renderCalendar(){
   const number=document.createElement('span');number.className='calendar-day-number';number.textContent=day;b.append(number);
   if(holiday){const h=document.createElement('span');h.className='calendar-holiday';h.textContent=holiday;b.append(h)}
   const nom=document.createElement('span');nom.className='calendar-metric-preview';nom.textContent='指名 '+nominationCount;b.append(nom);
-  const fb=document.createElement('span');fb.className='calendar-metric-preview';fb.textContent='FB '+freebackCount;b.append(fb);metricDefinitions().slice(2).forEach(def=>{const raw=daily[def.id];if(raw===undefined||raw===null||raw==='')return;const value=Number(raw);if(!Number.isFinite(value))return;const preview=document.createElement('span');preview.className='calendar-metric-preview';preview.textContent=def.name+' '+value;b.append(preview)});
+  const fb=document.createElement('span');fb.className='calendar-metric-preview';fb.textContent='FB '+freebackCount;b.append(fb);metricDefinitions().slice(2).forEach(def=>{const raw=daily[def.id],value=raw===undefined||raw===null||raw===''?0:Number(raw);if(!Number.isFinite(value))return;const preview=document.createElement('span');preview.className='calendar-metric-preview';preview.textContent=def.name+' '+value;b.append(preview)});
   events.forEach(name=>{const event=document.createElement('span');event.className='calendar-event-preview';event.textContent=name;b.append(event)});if(text.trim()){const preview=document.createElement('span');preview.className='calendar-memo-preview';preview.textContent=text;b.append(preview)}
   b.onclick=()=>openDayMemo(date);grid.append(b)
  }
