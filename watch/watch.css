@@ -35,7 +35,7 @@ button { color: inherit; font: inherit; touch-action: manipulation; border-radiu
 .watch-header { position: static; flex: 0 0 auto; min-height: 44px; display: grid; grid-template-columns: 48px minmax(0,1fr) 48px; align-items: center; gap: 4px; margin: 0 12%; }
 .watch-face.manage-open .watch-header { grid-template-columns: 42px minmax(0,1fr) 42px; gap: 4px; margin: 0 7% 8px; }
 .watch-face.manage-open .watch-title { grid-column: 2; text-align: center; }
-.watch-face.manage-open .back-button { grid-column: 3; justify-self: end; }
+.watch-face.manage-open .back-button { grid-column: 3; justify-self: end; transform: translate(-13px, 5px); }
 .watch-title { min-width: 0; overflow: hidden; font-size: clamp(15px, 5cqw, 23px); font-weight: 850; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .header-spacer { width: 34px; }
 .settings-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; }
