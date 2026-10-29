@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Shared app state is intentionally accessible without login.
     match /shared/{documentId} {
-      allow read, write: if documentId == 'main';
+      allow read, write: if documentId in ['main', 'watch'];
     }
 
     // Keep access to existing per-device data so it can seed the shared document.

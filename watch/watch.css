@@ -76,9 +76,13 @@ button { color: inherit; font: inherit; touch-action: manipulation; border-radiu
 .cast-list { display: grid; gap: 0; }
 .cast-list-row { display: flex; align-items: center; gap: 5px; min-width: 0; padding-right: 2px; border-bottom: 1px solid var(--watch-line); }
 .cast-list-row .cast-card { flex: 1; width: auto; min-width: 0; border-bottom: 0; }
+.cast-timer-action { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 2px; border: 1px solid #aab3c1; border-radius: 50% !important; background: transparent; color: #f5f6f9; font-size: 12px; font-weight: 800; }
+.cast-timer-action:disabled { opacity: .35; }
+.watch-face.home-medium .cast-timer-action { flex-basis: 32px; width: 32px; height: 32px; }
+.watch-face.home-large .cast-timer-action { flex-basis: 36px; width: 36px; height: 36px; }
 .cast-next-button { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; padding: 4px; border: 1px solid #aab3c1; border-radius: 50% !important; background: transparent; color: #f5f6f9; }
 .cast-next-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
-.cast-next-button:disabled { opacity: .3; }
+.cast-next-button:disabled { opacity: 1; }
 .cast-next-button:active:not(:disabled) { background: var(--watch-accent); color: #17150e; }
 .watch-face.home-medium .cast-next-button { flex-basis: 36px; width: 36px; height: 36px; }
 .watch-face.home-large .cast-next-button { flex-basis: 40px; width: 40px; height: 40px; }

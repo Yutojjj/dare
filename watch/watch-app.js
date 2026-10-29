@@ -8,6 +8,9 @@ let alertSettings = { advanceSecondsList: [], endEnabled: true, vibration: true 
 try { const saved = JSON.parse(storage?.getItem(ALERT_SETTINGS_KEY) ?? 'null'); if (saved) alertSettings = { advanceSecondsList: [...new Set((Array.isArray(saved.advanceSecondsList) ? saved.advanceSecondsList : [saved.advanceSeconds]).filter(value => ADVANCE_ALERT_CHOICES.includes(value)))], endEnabled: saved.endEnabled !== false, vibration: saved.vibration !== false }; } catch {}
 const advanceAlertsSent = new Map();
 const previousRemaining = new Map();
+const DAY_ROLLOVER_KEY = 'watch-day-rollover-v1';
+let rolloverTime = storage?.getItem(DAY_ROLLOVER_KEY) || '06:00';
+let lastAppliedDay = '';
 const store = createWatchStore(storage);
 const HOME_VIEW_KEY = 'watch-home-view-v2';
 const savedHomeView = readHomeViewSettings();
@@ -243,7 +246,6 @@ function renderHome() {
   syncWatchCastNames();
   const list = $('castList');
   const casts = controller.state.casts
-    .filter(cast => cast.nominatedTableIds.length > 0)
     .filter(cast => !homeSearchQuery || cast.name.toLocaleLowerCase('ja').includes(homeSearchQuery))
     .map(cast => ({ cast, remaining: controller.getRemainingMs(cast.id) }))
     .sort((a, b) => {
@@ -279,9 +281,27 @@ function renderHome() {
       button._next.className = 'cast-next-button';
       button._next.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h11M10 7l5 5-5 5M19 6v12"/></svg>';
       button._next.addEventListener('click', () => {
-        if (controller.moveToDestination(button.dataset.castId)) render();
+        const cast = controller.getCast(button.dataset.castId);
+        if (!cast) return;
+        if (cast.destinationTableId == null || cast.destinationTableId === cast.currentTableId) openRouteEditor(cast);
+        else if (controller.moveToDestination(cast.id)) render();
       });
-      button._row.append(button, button._next);
+      button._timerAction = document.createElement('button');
+      button._timerAction.type = 'button';
+      button._timerAction.className = 'cast-timer-action';
+      button._timerAction.addEventListener('click', () => {
+        const cast = controller.getCast(button.dataset.castId);
+        if (!cast) return;
+        const timer = controller.state.timers[cast.id];
+        if (timer?.paused) controller.resumeTimer(cast.id);
+        else if (timer) controller.pauseTimer(cast.id);
+        else {
+          const duration = cast.timerHistory?.[0]?.durationMs ?? ((timerChoices[0] ?? 300) * 1000);
+          controller.startTimerDuration(cast.id, duration);
+        }
+        render();
+      });
+      button._row.append(button, button._timerAction, button._next);
       button._parts = {
         name: document.createElement('strong'),
         timer: document.createElement('span'),
@@ -320,9 +340,16 @@ function renderHome() {
     name.textContent = cast.name;
     timer.textContent = castTimerLabel(cast.id);
     updateTimerColor(timer, remaining);
-    button._next.disabled = cast.destinationTableId == null || cast.destinationTableId === cast.currentTableId;
-    button._next.setAttribute('aria-label', `${cast.name}を${nextTableLabel(cast)}へ移動`);
-    button._next.title = `${nextTableLabel(cast)}へ移動`;
+    const activeTimer = controller.state.timers[cast.id];
+    const timerActionLabel = activeTimer?.paused ? '再開' : activeTimer ? '一時停止' : 'タイマー開始';
+    button._timerAction.textContent = activeTimer && !activeTimer.paused ? 'Ⅱ' : '▶';
+    button._timerAction.setAttribute('aria-label', `${cast.name}のタイマー${timerActionLabel}`);
+    button._timerAction.title = `${timerActionLabel}${!activeTimer ? '（前回の時間）' : ''}`;
+    button._timerAction.disabled = Boolean(activeTimer && !activeTimer.paused && remaining === 0);
+    button._next.disabled = false;
+    const hasNextTable = cast.destinationTableId != null && cast.destinationTableId !== cast.currentTableId;
+    button._next.setAttribute('aria-label', hasNextTable ? `${cast.name}を${nextTableLabel(cast)}へ移動` : `${cast.name}の推移卓を設定`);
+    button._next.title = hasNextTable ? `${nextTableLabel(cast)}へ移動` : '推移卓を設定';
     const routeIds = [...new Set(cast.nominatedTableIds)];
     if (cast.currentTableId && !routeIds.includes(cast.currentTableId)) routeIds.unshift(cast.currentTableId);
     const routeTables = routeIds.map(tableId => controller.getTable(tableId)).filter(Boolean);
@@ -437,6 +464,10 @@ function saveRouteEditor() {
     const candidate = pendingMemberCandidate;
     const id = controller.addCast(candidate.name, candidate.id, routeDraft);
     if (!id) return;
+    const added = controller.getCast(id);
+    added.dayAdded = true;
+    added.dayAddedOn = localDateKey();
+    store.save(controller.state);
     pendingMemberCandidate = null;
     routeEditorOpen = false;
     $('routeEditorDialog').hidden = true;
@@ -1039,14 +1070,16 @@ for (const seconds of ADVANCE_ALERT_CHOICES) {
 $('endAlertEnabled').checked = alertSettings.endEnabled;
 $('alertVibrationEnabled').checked = alertSettings.vibration;
 $('alertPlatformNote').textContent = window.DareWatchNative ? '時計の通知・アラーム許可を有効にしてください。' : 'ブラウザでは画面を開いている間にお知らせします。';
-for (const [tabId, floorTab] of [['floorSettingsTab', true], ['alertSettingsTab', false]]) {
+for (const [tabId, panelId] of [['floorSettingsTab', 'floorSettingsPanel'], ['alertSettingsTab', 'alertSettingsPanel'], ['dayRolloverTab', 'dayRolloverPanel']]) {
   $(tabId).addEventListener('click', () => {
-    $('floorSettingsTab').setAttribute('aria-selected', String(floorTab));
-    $('alertSettingsTab').setAttribute('aria-selected', String(!floorTab));
-    $('floorSettingsPanel').hidden = !floorTab;
-    $('alertSettingsPanel').hidden = floorTab;
+    for (const [tab, panel] of [['floorSettingsTab','floorSettingsPanel'],['alertSettingsTab','alertSettingsPanel'],['dayRolloverTab','dayRolloverPanel']]) {
+      $(tab).setAttribute('aria-selected', String(tab === tabId));
+      $(panel).hidden = panel !== panelId;
+    }
   });
 }
+$('dayRolloverTime').value = rolloverTime;
+$('dayRolloverTime').addEventListener('change', () => { rolloverTime = $('dayRolloverTime').value || '06:00'; storage?.setItem(DAY_ROLLOVER_KEY, rolloverTime); lastAppliedDay = ''; applyDailyMembers(); render(); });
 function saveAlertSettings() {
   try { storage?.setItem(ALERT_SETTINGS_KEY, JSON.stringify(alertSettings)); } catch {}
   if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings }));
@@ -1082,6 +1115,43 @@ function checkAdvanceAlerts() {
     toastTimer = window.setTimeout(() => { $('watchToast').hidden = true; }, 6000);
   }
 }
-render();
-controller.tick();
-window.setInterval(() => { checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
+function applyDailyMembers() {
+  const now = new Date();
+  const [hour, minute] = rolloverTime.split(':').map(Number);
+  const day = new Date(now);
+  if (now.getHours() < hour || (now.getHours() === hour && now.getMinutes() < minute)) day.setDate(day.getDate() - 1);
+  const date = localDateKey(day);
+  if (date === lastAppliedDay) return;
+  lastAppliedDay = date;
+  const expired = controller.state.casts.filter(cast => cast.dayAdded && cast.dayAddedOn !== date).map(cast => cast.id);
+  if (!expired.length) return;
+  controller.state.dayMemberHistory ??= [];
+  for (const id of expired) {
+    const cast = controller.getCast(id);
+    if (!cast) continue;
+    const prior = controller.state.dayMemberHistory.some(entry => entry.castId === id && entry.date === cast.dayAddedOn);
+    if (!prior) controller.state.dayMemberHistory.unshift({
+      castId: id,
+      name: cast.name,
+      date: cast.dayAddedOn,
+      movementHistory: structuredClone(cast.history ?? []),
+      timerHistory: structuredClone(cast.timerHistory ?? []),
+      archivedAt: Date.now(),
+    });
+    controller.removeCast(id);
+  }
+  store.save(controller.state);
+}
+function startWatchScreen() {
+  applyDailyMembers();
+  controller.tick();
+  render();
+  window.setInterval(() => { applyDailyMembers(); checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
+}
+window.WatchFirebase.start(store, () => {
+  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings }));
+  render();
+}).then(startWatchScreen).catch(error => {
+  console.error('Firebase共有へ接続できませんでした', error);
+  startWatchScreen();
+});

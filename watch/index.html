@@ -7,6 +7,8 @@
   <meta name="color-scheme" content="dark">
   <title>付け回しウォッチ</title>
   <link rel="stylesheet" href="./watch.css">
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="watch-stage">
@@ -93,10 +95,15 @@
         <div class="settings-tabs" role="tablist" aria-label="設定">
           <button id="floorSettingsTab" role="tab" aria-selected="true" aria-controls="floorSettingsPanel" type="button">フロア・卓</button>
           <button id="alertSettingsTab" role="tab" aria-selected="false" aria-controls="alertSettingsPanel" type="button">通知・振動</button>
+          <button id="dayRolloverTab" role="tab" aria-selected="false" aria-controls="dayRolloverPanel" type="button">日次更新</button>
         </div>
         <section id="floorSettingsPanel" role="tabpanel" aria-labelledby="floorSettingsTab">
         <div class="floor-list" id="floorList"></div>
         <button class="add-floor-button" id="addFloorButton" type="button">＋ フロアを追加</button>
+        </section>
+        <section id="dayRolloverPanel" role="tabpanel" aria-labelledby="dayRolloverTab" hidden>
+          <label class="alert-setting-row" for="dayRolloverTime"><span>メンバー更新時刻</span><input id="dayRolloverTime" type="time" value="06:00"></label>
+          <p class="alert-settings-note">指定時刻に一覧を当日のカレンダー登録メンバーへ更新します。設定済みの推移卓は引き継ぎます。</p>
         </section>
         <section id="alertSettingsPanel" role="tabpanel" aria-labelledby="alertSettingsTab" hidden>
           <p class="alert-settings-heading">終了前のお知らせ</p>
@@ -206,6 +213,7 @@
     </div>
   </div>
   <script src="./watch-core.js"></script>
+  <script src="./watch-firebase.js"></script>
   <script src="./watch-app.js"></script>
 </body>
 </html>
