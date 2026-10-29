@@ -1,6 +1,10 @@
-const CACHE_NAME = 'member-management-pwa-v3';
+const CACHE_NAME = 'member-management-pwa-v67';
 const APP_SHELL = [
   '/dare.html',
+  '/watch/',
+  '/watch/watch.css',
+  '/watch/watch-app.js',
+  '/watch/watch-core.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -36,7 +40,7 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
       }
       return response;
-    }).catch(async () => (await caches.match(request)) || (await caches.match('/dare.html'))));
+    }).catch(async () => (await caches.match(request)) || (url.pathname.startsWith('/watch') ? (await caches.match('/watch/')) || (await caches.match('/watch/index.html')) : null) || (await caches.match('/dare.html'))));
     return;
   }
 
