@@ -2,6 +2,12 @@ const { createWatchStore, WatchController, formatRemaining } = window.WatchCore;
 
 const $ = id => document.getElementById(id);
 const storage = safeLocalStorage();
+const ALERT_SETTINGS_KEY = 'watch-alert-settings-v1';
+const ADVANCE_ALERT_CHOICES = [10,20,30,60,120,180];
+let alertSettings = { advanceSecondsList: [], endEnabled: true, vibration: true };
+try { const saved = JSON.parse(storage?.getItem(ALERT_SETTINGS_KEY) ?? 'null'); if (saved) alertSettings = { advanceSecondsList: [...new Set((Array.isArray(saved.advanceSecondsList) ? saved.advanceSecondsList : [saved.advanceSeconds]).filter(value => ADVANCE_ALERT_CHOICES.includes(value)))], endEnabled: saved.endEnabled !== false, vibration: saved.vibration !== false }; } catch {}
+const advanceAlertsSent = new Map();
+const previousRemaining = new Map();
 const store = createWatchStore(storage);
 const HOME_VIEW_KEY = 'watch-home-view-v2';
 const savedHomeView = readHomeViewSettings();
@@ -258,7 +264,7 @@ function renderHome() {
     return;
   }
   const visibleIds = new Set(casts.map(({ cast }) => cast.id));
-  cards.forEach((card, id) => { if (!visibleIds.has(id)) card.remove(); });
+  cards.forEach((card, id) => { if (!visibleIds.has(id)) (card._row ?? card).remove(); });
   casts.forEach(({ cast, remaining }) => {
     let button = cards.get(cast.id);
     if (!button) {
@@ -266,6 +272,16 @@ function renderHome() {
       button.type = 'button';
       button.className = 'cast-card';
       button.dataset.castId = cast.id;
+      button._row = document.createElement('div');
+      button._row.className = 'cast-list-row';
+      button._next = document.createElement('button');
+      button._next.type = 'button';
+      button._next.className = 'cast-next-button';
+      button._next.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h11M10 7l5 5-5 5M19 6v12"/></svg>';
+      button._next.addEventListener('click', () => {
+        if (controller.moveToDestination(button.dataset.castId)) render();
+      });
+      button._row.append(button, button._next);
       button._parts = {
         name: document.createElement('strong'),
         timer: document.createElement('span'),
@@ -304,6 +320,9 @@ function renderHome() {
     name.textContent = cast.name;
     timer.textContent = castTimerLabel(cast.id);
     updateTimerColor(timer, remaining);
+    button._next.disabled = cast.destinationTableId == null || cast.destinationTableId === cast.currentTableId;
+    button._next.setAttribute('aria-label', `${cast.name}を${nextTableLabel(cast)}へ移動`);
+    button._next.title = `${nextTableLabel(cast)}へ移動`;
     const routeIds = [...new Set(cast.nominatedTableIds)];
     if (cast.currentTableId && !routeIds.includes(cast.currentTableId)) routeIds.unshift(cast.currentTableId);
     const routeTables = routeIds.map(tableId => controller.getTable(tableId)).filter(Boolean);
@@ -325,15 +344,16 @@ function renderHome() {
       button.dataset.routeSignature = routeSignature;
     }
     button.setAttribute('aria-label', `${cast.name}、現在${currentTableLabel(cast)}、卓の順番${routeLabels.join('から')}、タイマー${castTimerLabel(cast.id)}`);
-    list.append(button);
+    list.append(button._row);
   });
   if (!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
     list.querySelectorAll('.cast-card').forEach(card => {
       const previousTop = previousPositions.get(card.dataset.castId);
       if (previousTop == null) return;
       const offset = previousTop - card.getBoundingClientRect().top;
-      if (Math.abs(offset) < 2 || typeof card.animate !== 'function') return;
-      card.animate([{ transform: `translateY(${offset}px)` }, { transform: 'translateY(0)' }], {
+      const row = card._row ?? card;
+      if (Math.abs(offset) < 2 || typeof row.animate !== 'function') return;
+      row.animate([{ transform: `translateY(${offset}px)` }, { transform: 'translateY(0)' }], {
         duration: 280,
         easing: 'cubic-bezier(.2,.75,.25,1)',
       });
@@ -706,7 +726,7 @@ function renderMemberPicker() {
 }
 
 function renderManager() {
-  $('watchTitle').textContent = 'フロア・卓設定';
+  $('watchTitle').textContent = '設定';
   const list = $('floorList');
   list.replaceChildren();
   controller.state.floors.forEach(floor => {
@@ -853,11 +873,12 @@ function showHome() {
 }
 
 function showTimerAlert({ name }) {
+  if (!alertSettings.endEnabled) return;
   $('watchFace').classList.add('timer-alert');
   $('watchToast').textContent = `${name}　時間です`;
   $('watchToast').hidden = false;
   try {
-    if (typeof navigator.vibrate === 'function') navigator.vibrate([220, 100, 220]);
+    if (alertSettings.vibration && typeof navigator.vibrate === 'function') navigator.vibrate([220, 100, 220]);
   } catch { /* Vibration is optional and unavailable on some devices. */ }
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => { $('watchToast').hidden = true; }, 6_000);
@@ -1001,6 +1022,66 @@ window.addEventListener('storage', event => {
 });
 
 initializeTimeWheels();
+for (const seconds of ADVANCE_ALERT_CHOICES) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = seconds < 60 ? `${seconds}秒前` : `${seconds / 60}分前`;
+  button.setAttribute('aria-pressed', String(alertSettings.advanceSecondsList.includes(seconds)));
+  button.addEventListener('click', () => {
+    alertSettings.advanceSecondsList = alertSettings.advanceSecondsList.includes(seconds)
+      ? alertSettings.advanceSecondsList.filter(value => value !== seconds)
+      : [...alertSettings.advanceSecondsList, seconds].sort((a,b) => a-b);
+    button.setAttribute('aria-pressed', String(alertSettings.advanceSecondsList.includes(seconds)));
+    saveAlertSettings();
+  });
+  $('advanceAlertOptions').append(button);
+}
+$('endAlertEnabled').checked = alertSettings.endEnabled;
+$('alertVibrationEnabled').checked = alertSettings.vibration;
+$('alertPlatformNote').textContent = window.DareWatchNative ? '時計の通知・アラーム許可を有効にしてください。' : 'ブラウザでは画面を開いている間にお知らせします。';
+for (const [tabId, floorTab] of [['floorSettingsTab', true], ['alertSettingsTab', false]]) {
+  $(tabId).addEventListener('click', () => {
+    $('floorSettingsTab').setAttribute('aria-selected', String(floorTab));
+    $('alertSettingsTab').setAttribute('aria-selected', String(!floorTab));
+    $('floorSettingsPanel').hidden = !floorTab;
+    $('alertSettingsPanel').hidden = floorTab;
+  });
+}
+function saveAlertSettings() {
+  try { storage?.setItem(ALERT_SETTINGS_KEY, JSON.stringify(alertSettings)); } catch {}
+  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings }));
+}
+for (const id of ['endAlertEnabled', 'alertVibrationEnabled']) {
+  $(id).addEventListener('change', () => {
+    alertSettings.endEnabled = $('endAlertEnabled').checked;
+    alertSettings.vibration = $('alertVibrationEnabled').checked;
+    saveAlertSettings();
+  });
+}
+function checkAdvanceAlerts() {
+  for (const cast of controller.state.casts) {
+    const timer = controller.state.timers[cast.id];
+    if (!timer || timer.paused) { previousRemaining.delete(cast.id); continue; }
+    const remaining = timer.endsAt - Date.now();
+    const previous = previousRemaining.get(cast.id);
+    const before = previous?.end === timer.endsAt ? previous.remaining : Math.min(timer.durationMs, remaining + 1100);
+    previousRemaining.set(cast.id, { end: timer.endsAt, remaining });
+    let due = false;
+    for (const seconds of alertSettings.advanceSecondsList) {
+      const key = `${cast.id}|${seconds}`;
+      if (remaining > 0 && before > seconds * 1000 && remaining <= seconds * 1000 && advanceAlertsSent.get(key) !== timer.endsAt) {
+        advanceAlertsSent.set(key, timer.endsAt);
+        due = true;
+      }
+    }
+    if (!due) continue;
+    $('watchToast').textContent = `${cast.name}　残り${Math.ceil(remaining / 1000)}秒`;
+    $('watchToast').hidden = false;
+    if (!window.DareWatchNative && alertSettings.vibration && navigator.vibrate) navigator.vibrate([150, 100, 150]);
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => { $('watchToast').hidden = true; }, 6000);
+  }
+}
 render();
 controller.tick();
-window.setInterval(() => { controller.tick(); render(); }, 1_000);
+window.setInterval(() => { checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);

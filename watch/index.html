@@ -90,8 +90,23 @@
         </section>
       </div>
       <main class="watch-content manage-screen" id="manageScreen" hidden>
+        <div class="settings-tabs" role="tablist" aria-label="設定">
+          <button id="floorSettingsTab" role="tab" aria-selected="true" aria-controls="floorSettingsPanel" type="button">フロア・卓</button>
+          <button id="alertSettingsTab" role="tab" aria-selected="false" aria-controls="alertSettingsPanel" type="button">通知・振動</button>
+        </div>
+        <section id="floorSettingsPanel" role="tabpanel" aria-labelledby="floorSettingsTab">
         <div class="floor-list" id="floorList"></div>
         <button class="add-floor-button" id="addFloorButton" type="button">＋ フロアを追加</button>
+        </section>
+        <section id="alertSettingsPanel" role="tabpanel" aria-labelledby="alertSettingsTab" hidden>
+          <p class="alert-settings-heading">終了前のお知らせ</p>
+          <div class="advance-alert-options" id="advanceAlertOptions" role="group" aria-label="終了前のお知らせ（複数選択）"></div>
+          <p class="alert-settings-note">複数選択できます。すべて解除すると通知しません。</p>
+          <label class="alert-setting-row"><span>終了時のお知らせ</span><input id="endAlertEnabled" type="checkbox"></label>
+          <label class="alert-setting-row"><span>振動</span><input id="alertVibrationEnabled" type="checkbox"></label>
+          <p class="alert-settings-note">この端末に自動保存されます。</p>
+          <p class="alert-settings-note" id="alertPlatformNote"></p>
+        </section>
       </main>
       <div class="timer-dialog-backdrop member-picker-backdrop" id="memberPickerDialog" hidden>
         <section class="timer-dialog member-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="memberPickerTitle">
