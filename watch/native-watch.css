@@ -54,4 +54,9 @@
 .native-web .manage-screen { position:absolute; inset:23% 10% 12%; overflow:auto; }
 .native-web .settings-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
 .native-web .settings-tabs button { font-size:2.7cqw; min-height:9cqw; }
+.native-web .member-actions-backdrop { display:block; padding:0; }
+.native-web .member-actions-dialog { display:flex; flex-direction:column; width:100%; height:100%; max-height:none; padding:16% 10% 12%; margin:0; background:#101318; }
+.native-web .member-actions-dialog .timer-dialog-header { flex:0 0 auto; min-height:10cqw; }
+.native-web .member-actions-list { display:flex; flex-direction:column; gap:12px; margin-top:8cqw; }
+.native-web .member-actions-list button { min-height:17cqw; font-size:4.5cqw; }
 
