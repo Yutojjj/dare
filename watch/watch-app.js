@@ -568,8 +568,8 @@ function renderTimer(cast) {
   const display = $('timerDisplay');
   display.textContent = remaining === null ? '—:—' : formatRemaining(remaining);
   updateTimerColor(display, remaining);
-  $('timerNotice').hidden = remaining !== 0 && !timer?.paused;
-  $('timerNotice').textContent = remaining === 0 ? '時間です' : '一時停止中';
+  $('timerNotice').hidden = remaining === 0 || !timer?.paused;
+  $('timerNotice').textContent = $('timerNotice').hidden ? '' : '一時停止中';
   $('timerControls').hidden = remaining === null;
   $('timerAdjustActions').hidden = remaining === null;
   $('timerSubtractActions').hidden = remaining === null;

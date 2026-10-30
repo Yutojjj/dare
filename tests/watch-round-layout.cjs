@@ -155,7 +155,8 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#dayRolloverDialog').isVisible(),false);
     assert.equal(await page.locator('#manageScreen').isVisible(),true,'swiping back must preserve the settings screen');
     assert.equal(await page.evaluate(()=>localStorage.getItem('watch-day-rollover-v1')),'09:30','swiping without save must discard dial changes');
-    await page.evaluate(()=>{const cast=controller.state.casts[0];controller.startTimerDuration(cast.id,1000,Date.now()-2000);controller.tick();});
+    await page.evaluate(()=>{const cast=controller.state.casts[0];controller.startTimerDuration(cast.id,1000,Date.now()-2000);controller.tick();renderTimer(cast);});
+    assert.equal(await page.locator('#timerNotice').textContent(),'','expired timer must not show an extra time-up caption');
     assert.equal(await page.locator('#watchToast').isVisible(),false,'expiry must not show an in-app red banner');
     assert.equal(await page.evaluate(()=>controller.state.timers[controller.state.casts[0].id].alerted),true,'expiry handling must still run');
     await page.evaluate(()=>{const cast=controller.state.casts[0];controller.startTimerDuration(cast.id,60000,Date.now()-31000);alertSettings.advanceSecondsList=[30];const end=controller.state.timers[cast.id].endsAt;previousRemaining.set(cast.id,{end,remaining:31000});checkAdvanceAlerts();});
