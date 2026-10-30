@@ -73,6 +73,7 @@ public final class WebWatchActivity extends Activity {
                     Uri origin = Uri.parse(page);
                     if (trusted(origin)) {
                         try {
+                            if ("ready".equals(uri.getHost())) { loadingView.setVisibility(View.GONE); openPendingCast(); }
                             if ("test".equals(uri.getHost())) { timers.testNotification(true); android.widget.Toast.makeText(WebWatchActivity.this,"5秒後にテスト通知します",android.widget.Toast.LENGTH_SHORT).show(); }
                             if ("permissions".equals(uri.getHost())) {
                                 if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},20);

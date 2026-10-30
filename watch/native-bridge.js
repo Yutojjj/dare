@@ -5,6 +5,7 @@ if (new URLSearchParams(location.search).get('native') === 'gecko') {
   let pending;
   let task;
   window.DareWatchNative = Object.freeze({
+    ready() { location.href = 'darewatch://ready'; },
     testNotification() { location.href = 'darewatch://test'; },
     requestPermissions() { location.href = 'darewatch://permissions'; },
     syncTimers(raw) {
