@@ -18,18 +18,27 @@ public final class WatchTileService extends TileService {
     private WatchRepository repository;
     static void save(android.content.Context context, String raw) {
         android.content.SharedPreferences prefs=context.getSharedPreferences("watch-tile",0);
-        if(raw.equals(prefs.getString("state","")))return;
+        boolean changed=!raw.equals(prefs.getString("state",""));
         android.content.SharedPreferences.Editor editor=prefs.edit().putString("state",raw);
-        try{JSONObject state=new JSONObject(raw);if(state.has("dayRolloverTime"))editor.putString("rollover",state.getString("dayRolloverTime"));}catch(Exception ignored){}
+        try{JSONObject state=new JSONObject(raw);if(state.has("dayRolloverTime"))editor.putString("rollover",state.getString("dayRolloverTime"));JSONObject alerts=state.optJSONObject("notificationSettings");if(alerts==null&&!prefs.contains("alerts"))alerts=new JSONObject(prefs.getString("state","{}")).optJSONObject("notificationSettings");if(alerts!=null)editor.putString("alerts",alerts.toString());}catch(Exception ignored){}
         editor.apply();
-        TileService.getUpdater(context).requestUpdate(WatchTileService.class);
+        if(changed)TileService.getUpdater(context).requestUpdate(WatchTileService.class);
     }
     private JSONObject state(){try{return new JSONObject(getSharedPreferences("watch-tile",0).getString("state","{}"));}catch(Exception e){return new JSONObject();}}
     @Override protected void onTileEnterEvent(EventBuilders.TileEnterEvent event){
         // Refresh only while the tile is visited, rather than keeping a network
         // connection or browser running in the background.
         if(repository!=null)repository.close();
-        repository=new WatchRepository(this,(data,status)->{if(data.optInt("version")==2)save(this,data.toString());});
+        repository=new WatchRepository(this,(data,status)->{if(data.optInt("version")==2){
+            save(this,data.toString());
+            try{
+                JSONObject snapshot=new JSONObject(data.toString());
+                android.content.SharedPreferences prefs=getSharedPreferences("watch-tile",0);
+                snapshot.put("notificationSettings",new JSONObject(prefs.getString("alerts","{\"advanceSecondsList\":[],\"endEnabled\":true,\"vibration\":true}")));
+                snapshot.put("casts",new JSONArray(WatchTileData.members(data,System.currentTimeMillis(),prefs.getString("rollover","06:00"))));
+                NativeTimers timers=new NativeTimers(this);timers.syncTimers(snapshot.toString());timers.restore();
+            }catch(Exception error){android.util.Log.e("DareTile","Timer sync failed",error);}
+        }});
         repository.refresh();
     }
     @Override public void onDestroy(){if(repository!=null)repository.close();super.onDestroy();}

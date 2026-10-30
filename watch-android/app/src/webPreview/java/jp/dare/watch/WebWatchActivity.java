@@ -19,6 +19,7 @@ public final class WebWatchActivity extends Activity {
     private GeckoView browserView;
     private LinearLayout loadingView;
     private TextView loadingLabel;
+    private TimerNoticeView timerNotice;
     private WebExtension.Port navigationPort;
     private boolean webCanGoBack, edgeCandidate, nativeSwiping;
     private float startX, startY;
@@ -53,6 +54,7 @@ public final class WebWatchActivity extends Activity {
         loadingLabel=new TextView(this); loadingLabel.setText("読み込み中"); loadingLabel.setTextColor(Color.WHITE); loadingLabel.setTextSize(14); loadingLabel.setGravity(Gravity.CENTER); loadingLabel.setPadding(0,(int)(12*density),0,(int)(14*density)); loadingView.addView(loadingLabel);
         ProgressBar progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal); progress.setIndeterminate(true); progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Color.rgb(169,185,255))); loadingView.addView(progress,new LinearLayout.LayoutParams((int)(110*density),(int)(4*density)));
         root.addView(loadingView,new FrameLayout.LayoutParams(-1,-1)); setContentView(root);
+        timerNotice=new TimerNoticeView(this);root.addView(timerNotice,new FrameLayout.LayoutParams(-1,-1));
         android.util.Log.i("DareWeb", "create runtime"); if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext()); android.util.Log.i("DareWeb", "runtime ready");
         session = new GeckoSession();
         session.setContentDelegate(new GeckoSession.ContentDelegate() {
@@ -109,22 +111,22 @@ public final class WebWatchActivity extends Activity {
         }, error->{android.util.Log.e("DareWeb","Navigation bridge unavailable",error);if(!isFinishing()&&!isDestroyed())session.loadUri(target);});
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 20);
     }
-    @Override protected void onResume() { super.onResume(); if (session != null) session.setActive(true); if (timers != null) timers.restore(); }
-    @Override protected void onPause() { pausedAt=System.currentTimeMillis(); if (session != null) session.setActive(false); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); NativeTimers.foregroundActive=true;NativeTimers.foregroundAlert=entry->{if(timerNotice!=null)timerNotice.show(entry);};if (session != null) session.setActive(true); if (timers != null) timers.restore(); }
+    @Override protected void onPause() { NativeTimers.foregroundActive=false;NativeTimers.foregroundAlert=null;pausedAt=System.currentTimeMillis(); if (session != null) session.setActive(false); super.onPause(); }
     @Override protected void onDestroy() { if (session != null) session.close(); super.onDestroy(); }
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
         if(browserView==null)return super.dispatchTouchEvent(event);
         int action=event.getActionMasked();
-        if(action==MotionEvent.ACTION_DOWN){startX=event.getX();startY=event.getY();nativeSwiping=false;edgeCandidate=navigationPort!=null&&loadingView.getVisibility()!=View.VISIBLE&&startX<browserView.getWidth()*.55f;if(edgeCandidate&&browserView.getParent()!=null)browserView.getParent().requestDisallowInterceptTouchEvent(true);}
+        if(action==MotionEvent.ACTION_DOWN){startX=event.getX();startY=event.getY();nativeSwiping=false;edgeCandidate=(timerNotice.showing()||(navigationPort!=null&&loadingView.getVisibility()!=View.VISIBLE))&&startX<browserView.getWidth()*.55f;if(edgeCandidate&&browserView.getParent()!=null)browserView.getParent().requestDisallowInterceptTouchEvent(true);}
         if(action==MotionEvent.ACTION_MOVE&&edgeCandidate){float dx=event.getX()-startX,dy=Math.abs(event.getY()-startY);if(!nativeSwiping&&dx>browserView.getWidth()*.08f&&dx>dy*1.3f){nativeSwiping=true;MotionEvent cancel=MotionEvent.obtain(event);cancel.setAction(MotionEvent.ACTION_CANCEL);super.dispatchTouchEvent(cancel);cancel.recycle();}if(nativeSwiping)return true;}
         if(action==MotionEvent.ACTION_UP&&nativeSwiping){float dx=event.getX()-startX;nativeSwiping=false;edgeCandidate=false;if(dx>browserView.getWidth()*.25f){backHaptic();navigateBack();}return true;}
         if(action==MotionEvent.ACTION_CANCEL){boolean consumed=nativeSwiping;nativeSwiping=false;edgeCandidate=false;if(consumed)return true;}
         return super.dispatchTouchEvent(event);
     }
     private void sendWebBack(){if(navigationPort!=null){org.json.JSONObject command=new org.json.JSONObject();try{command.put("type","back");navigationPort.postMessage(command);}catch(org.json.JSONException error){android.util.Log.e("DareWeb","Back command failed",error);}}}
-    @Override protected void onNewIntent(android.content.Intent intent){super.onNewIntent(intent);setIntent(intent);pendingCastId=intent.getStringExtra("castId");if(loadingView.getVisibility()!=View.VISIBLE)openPendingCast();}
+    @Override protected void onNewIntent(android.content.Intent intent){super.onNewIntent(intent);setIntent(intent);String preview=intent.getStringExtra("previewUrl");if(preview!=null&&trusted(Uri.parse(preview))){loadingView.setVisibility(View.VISIBLE);session.loadUri(preview);}pendingCastId=intent.getStringExtra("castId");if(loadingView.getVisibility()!=View.VISIBLE)openPendingCast();}
     private void openPendingCast(){if(pendingCastId==null||navigationPort==null)return;try{org.json.JSONObject command=new org.json.JSONObject().put("type","openCast").put("castId",pendingCastId);navigationPort.postMessage(command);pendingCastId=null;}catch(org.json.JSONException ignored){}}
     private void backHaptic(){android.os.Vibrator vibrator=(android.os.Vibrator)getSystemService(VIBRATOR_SERVICE);if(vibrator!=null&&vibrator.hasVibrator())vibrator.vibrate(android.os.VibrationEffect.createOneShot(22,android.os.VibrationEffect.DEFAULT_AMPLITUDE));}
-    private void navigateBack(){if(navigationPort!=null&&webCanGoBack)sendWebBack();else finishAndRemoveTask();}
+    private void navigateBack(){if(timerNotice!=null&&timerNotice.showing())timerNotice.dismiss();else if(navigationPort!=null&&webCanGoBack)sendWebBack();else finishAndRemoveTask();}
     @Override public void onBackPressed(){navigateBack();}
 }
