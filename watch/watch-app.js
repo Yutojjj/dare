@@ -79,6 +79,13 @@ function localDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function businessDateKey(date = new Date()) {
+  const day = new Date(date);
+  const [hour, minute] = rolloverTime.split(':').map(Number);
+  if (day.getHours() * 60 + day.getMinutes() < hour * 60 + minute) day.setDate(day.getDate() - 1);
+  return localDateKey(day);
+}
+
 function readCalendarMemberIds(date) {
   try {
     const saved = JSON.parse(storage?.getItem(MEMBER_DIRECTORY_KEY) ?? 'null');
@@ -498,7 +505,9 @@ function saveRouteEditor() {
     if (!id) return;
     const added = controller.getCast(id);
     added.dayAdded = true;
-    added.dayAddedOn = localDateKey();
+    added.dayAddedAt = Date.now();
+    added.dayAddedOn = businessDateKey(new Date(added.dayAddedAt));
+    added.dayDateVersion = 1;
     store.save(controller.state);
     pendingMemberCandidate = null;
     routeEditorOpen = false;
@@ -726,7 +735,7 @@ function renderMemberPicker() {
   syncWatchCastNames();
   const list = $('memberPickerList');
 
-  const date = localDateKey();
+  const date = businessDateKey();
   const dayOnly = $('memberPickerDayToggle').getAttribute('aria-pressed') === 'true';
   const selectedCasts = new Map(controller.state.casts.map(cast => [String(cast.id), cast]));
   const candidates = [...appMembers];
@@ -1178,11 +1187,20 @@ function checkAdvanceAlerts() {
   }
 }
 function applyDailyMembers() {
-  const now = new Date();
-  const [hour, minute] = rolloverTime.split(':').map(Number);
-  const day = new Date(now);
-  if (now.getHours() < hour || (now.getHours() === hour && now.getMinutes() < minute)) day.setDate(day.getDate() - 1);
-  const date = localDateKey(day);
+  // Older web builds recorded midnight-based dates. Use the actual initial
+  // registration time to repair those entries before applying the day rollover.
+  let repaired = false;
+  for (const cast of controller.state.casts) {
+    if (!cast.dayAdded || cast.dayDateVersion === 1) continue;
+    const initial = cast.history?.find(entry => entry.reason === '初期状態' && Number.isFinite(entry.at));
+    if (!initial || cast.dayAddedOn !== localDateKey(new Date(initial.at))) continue;
+    cast.dayAddedAt = initial.at;
+    cast.dayAddedOn = businessDateKey(new Date(initial.at));
+    cast.dayDateVersion = 1;
+    repaired = true;
+  }
+  if (repaired) store.save(controller.state);
+  const date = businessDateKey();
   if (date === lastAppliedDay) return;
   lastAppliedDay = date;
   const expired = controller.state.casts.filter(cast => cast.dayAdded && cast.dayAddedOn !== date).map(cast => cast.id);
@@ -1246,9 +1264,7 @@ connectWatch();
 
 let performanceDraft = null, performanceBusy = false;
 function performanceDay() {
-  const date = new Date(), [hour, minute] = rolloverTime.split(':').map(Number);
-  if (date.getHours() * 60 + date.getMinutes() < hour * 60 + minute) date.setDate(date.getDate() - 1);
-  return localDateKey(date);
+  return businessDateKey();
 }
 async function openPerformanceInput(cast) {
   if (performanceBusy) return;
