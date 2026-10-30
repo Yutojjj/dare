@@ -8,13 +8,41 @@
     appId: '1:590672921816:web:e3a811470b2460885d43ad',
   };
   let ready = false, applyingRemote = false;
+  const CONFIRMED_KEY = 'watch-confirmed-state-v1';
+  let sdkTask;
+  function ensureFirebase() {
+    if (typeof firebase !== 'undefined' && firebase.firestore) return Promise.resolve();
+    if (!sdkTask) {
+      const load = name => new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        const timeout = setTimeout(() => { script.remove(); reject(new Error('接続がタイムアウトしました')); }, 12000);
+        script.src = `https://www.gstatic.com/firebasejs/12.19.0/${name}.js`;
+        script.onload = () => { clearTimeout(timeout); resolve(); };
+        script.onerror = () => { clearTimeout(timeout); reject(new Error('接続できませんでした')); };
+        document.head.append(script);
+      });
+      sdkTask = load('firebase-app-compat').then(() => load('firebase-firestore-compat')).catch(error => { sdkTask = null; throw error; });
+    }
+    return sdkTask;
+  }
+  function remember(state) {
+    try { localStorage.setItem(CONFIRMED_KEY, JSON.stringify(state)); } catch { /* The online session can continue without a cache. */ }
+  }
   window.WatchFirebase = {
+    cachedState() {
+      try {
+        const state = JSON.parse(localStorage.getItem(CONFIRMED_KEY) || 'null');
+        return state?.version === 2 && Array.isArray(state.casts) && Array.isArray(state.floors) && state.timers && typeof state.timers === 'object' ? state : null;
+      } catch { return null; }
+    },
     async readPerformance() {
+      await ensureFirebase();
       const snapshot = await firebase.firestore().collection('shared').doc('main').get();
       if (!snapshot.exists || !Array.isArray(snapshot.data()?.state?.members)) throw new Error('管理アプリのデータを読み込めませんでした');
       return snapshot.data().state;
     },
     async savePerformance(memberId, date, deltas) {
+      await ensureFirebase();
       const ref = firebase.firestore().collection('shared').doc('main');
       return firebase.firestore().runTransaction(async transaction => {
         const snapshot = await transaction.get(ref);
@@ -36,6 +64,7 @@
       });
     },
     async start(store, onRemote) {
+      await ensureFirebase();
       const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
       const ref = firebase.firestore(app).collection('shared').doc('watch');
       const local = store.state;
@@ -43,6 +72,7 @@
       if (first.exists && first.data()?.state?.version === 2) {
         applyingRemote = true;
         store.state = first.data().state;
+        remember(store.state);
         localStorage.setItem('cast-watch-v1', JSON.stringify(store.state));
         onRemote();
         applyingRemote = false;
@@ -70,6 +100,7 @@
         if (!state || state.version !== 2) return;
         applyingRemote = true;
         store.state = state;
+        if (!snapshot.metadata?.hasPendingWrites) remember(state);
         localStorage.setItem('cast-watch-v1', JSON.stringify(state));
         onRemote();
         applyingRemote = false;

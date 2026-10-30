@@ -12,6 +12,10 @@ const DAY_ROLLOVER_KEY = 'watch-day-rollover-v1';
 let rolloverTime = storage?.getItem(DAY_ROLLOVER_KEY) || '06:00';
 let lastAppliedDay = '';
 const store = createWatchStore(storage);
+const startupCache = window.WatchFirebase.cachedState?.();
+if (startupCache) store.state = startupCache;
+let sharedConnected = false;
+let startupMessage = '最新データを確認中…';
 const HOME_VIEW_KEY = 'watch-home-view-v2';
 const savedHomeView = readHomeViewSettings();
 let selectedCastId = null;
@@ -893,6 +897,9 @@ function render() {
   if (detailOpen) renderDetail();
   else if (managerOpen) renderManager();
   else renderHome();
+  $('watchFace').inert = !sharedConnected;
+  if (!sharedConnected) $('openMemberAddButton').textContent = startupMessage;
+  else $('openMemberAddButton').textContent = '＋ メンバーを追加';
 }
 
 function openCast(castId) {
@@ -1170,25 +1177,44 @@ function applyDailyMembers() {
   }
   store.save(controller.state);
 }
+function revealWatchScreen() {
+  Promise.resolve(document.fonts?.ready).then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+    $('watchBoot')?.remove();
+    window.DareWatchNative?.ready?.();
+  })));
+}
 function startWatchScreen() {
+  sharedConnected = true;
   applyDailyMembers();
   controller.tick();
   render();
   // Wait for the final layout and fonts before revealing the screen. The APK
   // observes removal of this cover and reveals the same completed frame.
-  Promise.resolve(document.fonts?.ready).then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
-    $('watchBoot')?.remove();
-    window.DareWatchNative?.ready?.();
-  })));
+  revealWatchScreen();
   window.setInterval(() => { applyDailyMembers(); checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
 }
-window.WatchFirebase.start(store, () => {
-  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
-  render();
-}).then(startWatchScreen).catch(error => {
-  console.error('Firebase共有へ接続できませんでした', error);
-  startWatchScreen();
-});
+if (startupCache) { render(); revealWatchScreen(); }
+let connectTask = null;
+function connectWatch() {
+  if (sharedConnected || connectTask) return connectTask;
+  connectTask = window.WatchFirebase.start(store, () => {
+    if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
+    render();
+  }).then(startWatchScreen).catch(error => {
+    console.error('Firebase共有へ接続できませんでした', error);
+    if (startupCache) { startupMessage = '接続待ち・表示のみ'; render(); }
+    else {
+      const boot=$('watchBoot');
+      if (boot) { boot.querySelector('span').textContent = '接続できません。タップして再試行'; boot.onclick = () => location.reload(); }
+      window.DareWatchNative?.ready?.();
+    }
+    window.setTimeout(() => { if (!document.hidden) connectWatch(); }, 5000);
+  }).finally(() => { connectTask = null; });
+  return connectTask;
+}
+window.addEventListener('online', connectWatch);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) connectWatch(); });
+connectWatch();
 
 
 let performanceDraft = null, performanceBusy = false;
