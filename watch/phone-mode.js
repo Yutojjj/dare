@@ -13,6 +13,21 @@
     .filter(dialog => !dialog.hidden)
     .sort((a,b) => (parseInt(getComputedStyle(b).zIndex)||0)-(parseInt(getComputedStyle(a).zIndex)||0))[0];
   const clearDrag = () => { if(surface){surface.style.transform='';surface.style.transition='';} surface=null; dragged=false; };
+  const closeTop = () => {
+    const openDialog=topDialog();
+    if(openDialog) openDialog.querySelector('.timer-dialog-close')?.click();
+    else document.getElementById('backButton')?.click();
+  };
+  // The APK's native gesture recognizer uses this event when Gecko/Android
+  // consumes a touch sequence before it reaches the page.
+  document.addEventListener('dare-watch-back', () => {
+    tracking=false; clearDrag();
+    surface=topDialog() || [...document.querySelectorAll('#detailScreen,#manageScreen')].find(screen=>!screen.hidden) || null;
+    if(!surface)return;
+    surface.style.transition='transform 180ms ease-out';
+    surface.style.transform=`translateX(${innerWidth}px)`;
+    setTimeout(()=>{closeTop();clearDrag();},180);
+  });
 
   document.addEventListener('touchstart', event => {
     if (event.touches.length !== 1) return;
@@ -49,9 +64,7 @@
     surface.style.transform=dismiss?`translateX(${innerWidth}px)`:'translateX(0)';
     setTimeout(() => {
       if(dismiss){
-        const openDialog=topDialog();
-        if(openDialog) openDialog.querySelector('.timer-dialog-close')?.click();
-        else document.getElementById('backButton')?.click();
+        closeTop();
       }
       clearDrag();
     },180);

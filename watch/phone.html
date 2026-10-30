@@ -9,10 +9,12 @@
   <title>付け回し</title>
   <link rel="stylesheet" href="./watch.css">
   <link rel="stylesheet" href="./phone.css">
+  <link rel="stylesheet" href="./boot.css">
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+  <div id="watchBoot" role="status"><img src="../icons/icon-192.png" alt=""><span>読み込み中</span><div class="watch-boot-bar" aria-hidden="true"></div></div>
   <div class="watch-stage">
     <div class="watch-face" id="watchFace">
       <header class="watch-header">

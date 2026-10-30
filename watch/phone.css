@@ -90,3 +90,6 @@ body { min-height: 100svh; background: #090b0f; }
   .cast-card-name { font-size: 18px; }
   .cast-card-route-stop strong { font-size: 16px; }
 }
+.watch-face .cast-card-name,
+.watch-face.home-medium .cast-card-name,
+.watch-face.home-large .cast-card-name { font-size:16px; line-height:1.2; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }

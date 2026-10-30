@@ -24,6 +24,17 @@ const server=http.createServer((req,res)=>{
     const add=await page.locator('#openMemberAddButton').boundingBox();
     assert.ok(add.y>340&&add.width>=390,'addition must cover the bottom arc');
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-home.png')});
+    const nameFonts=[];
+    for(const size of ['small','medium','large']){
+      nameFonts.push(await page.evaluate(size=>{
+        homeCardSize=size;controller.state.casts[0].name='あいうえおかきくけこ長い名前';render();
+        const name=document.querySelector('.cast-card-name');const style=getComputedStyle(name);
+        if(style.textOverflow==='ellipsis'||style.whiteSpace==='nowrap')throw new Error('member name is truncated');
+        return style.fontSize;
+      },size));
+    }
+    assert.equal(new Set(nameFonts).size,1,'member name font must not change across display sizes');
+    await page.evaluate(()=>{homeCardSize='small';render();});
     await page.evaluate(()=>openCast(controller.state.casts[0].id));
     const next=await page.locator('#nextTableAction').boundingBox();
     assert.ok(next.y>340&&next.width>=390,'next-table action must cover the bottom arc');

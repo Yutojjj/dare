@@ -1168,6 +1168,7 @@ function startWatchScreen() {
   applyDailyMembers();
   controller.tick();
   render();
+  $('watchBoot')?.remove();
   window.setInterval(() => { applyDailyMembers(); checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
 }
 window.WatchFirebase.start(store, () => {

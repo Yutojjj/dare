@@ -112,4 +112,12 @@
 .native-web .wheel-time-readout { font-size:3.3cqw; margin-top:2cqw; }
 .native-web .timer-config-message { font-size:2.5cqw; }
 .native-web .timer-saved-choices { display:none; }
+.native-web .watch-face { --watch-row-size:18cqw; }
+.native-web .watch-face.home-medium { --watch-row-size:22cqw; }
+.native-web .watch-face.home-large { --watch-row-size:27cqw; }
+.native-web .cast-list-row { height:auto; min-height:var(--watch-row-size); }
+.native-web .cast-list-row .cast-card { height:auto; min-height:var(--watch-row-size); }
+.native-web .watch-face .cast-card-name,
+.native-web .watch-face.home-medium .cast-card-name,
+.native-web .watch-face.home-large .cast-card-name { font-size:3.8cqw; line-height:1.2; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
 
