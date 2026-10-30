@@ -110,8 +110,8 @@
         <button class="add-floor-button" id="addFloorButton" type="button">＋ フロアを追加</button>
         </section>
         <section id="dayRolloverPanel" role="tabpanel" aria-labelledby="dayRolloverTab" hidden>
-          <label class="alert-setting-row" for="dayRolloverTime"><span>メンバー更新時刻</span><input id="dayRolloverTime" type="time" value="06:00"></label>
-          <p class="alert-settings-note">指定時刻に一覧を当日のカレンダー登録メンバーへ更新します。設定済みの推移卓は引き継ぎます。</p>
+          <div class="alert-setting-row"><span>メンバー更新時刻</span><button id="openDayRolloverDial" type="button" aria-haspopup="dialog" aria-label="メンバー更新時刻を設定">06:00</button><input id="dayRolloverTime" type="hidden" value="06:00"></div>
+          <p class="alert-settings-note">指定時刻にメンバー一覧をリセットします。移動・タイマー履歴は保存されます。</p>
         </section>
         <section id="alertSettingsPanel" role="tabpanel" aria-labelledby="alertSettingsTab" hidden>
           <p class="alert-settings-heading">終了前のお知らせ</p>
@@ -165,6 +165,18 @@
             <button id="startCustomTimer" type="button">時間をセット</button>
           </div>
           <div class="timer-saved-choices" id="timerSavedChoices" aria-label="保存したタイマー候補"></div>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop day-rollover-backdrop" id="dayRolloverDialog" hidden>
+        <section class="timer-dialog day-rollover-dialog" role="dialog" aria-modal="true" aria-labelledby="dayRolloverTitle">
+          <header class="timer-dialog-header"><h2 id="dayRolloverTitle">更新時刻を設定</h2><button class="timer-dialog-close" id="closeDayRolloverDial" type="button" aria-label="閉じる">×</button></header>
+          <div class="time-wheel-picker">
+            <div class="time-wheel-column"><div class="time-wheel" id="rolloverHourWheel" role="listbox" tabindex="0" aria-label="更新時刻の時"></div><span class="wheel-unit">時</span></div>
+            <span class="wheel-colon">:</span>
+            <div class="time-wheel-column"><div class="time-wheel" id="rolloverMinuteWheel" role="listbox" tabindex="0" aria-label="更新時刻の分"></div><span class="wheel-unit">分</span></div>
+          </div>
+          <output class="wheel-time-readout" id="rolloverTimeReadout">06:00</output>
+          <div class="timer-dialog-actions"><button id="cancelDayRolloverDial" type="button">キャンセル</button><button id="saveDayRolloverDial" type="button">保存</button></div>
         </section>
       </div>
       <div class="timer-dialog-backdrop history-dialog-backdrop" id="historyDialog" hidden>

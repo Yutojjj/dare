@@ -129,6 +129,32 @@ const server=http.createServer((req,res)=>{
       event('touchstart',80);event('touchmove',220);event('touchend',220);
     });
     await page.waitForTimeout(250);assert.equal(await page.locator('#memberActionsDialog').isVisible(),false);
+    await page.evaluate(()=>{managerOpen=true;render();});
+    await page.locator('#dayRolloverTab').click();
+    await page.locator('#openDayRolloverDial').click();
+    assert.equal(await page.locator('#rolloverHourWheel .wheel-option').count(),24);
+    assert.equal(await page.locator('#rolloverMinuteWheel .wheel-option').count(),60);
+    for(const width of [225,396]){
+      await page.setViewportSize({width,height:width});
+      await page.evaluate(()=>{selectRolloverValue('hour',9,true);selectRolloverValue('minute',30,true);});
+      const header=await page.locator('#dayRolloverTitle').boundingBox(),dial=await page.locator('#dayRolloverDialog .time-wheel-picker').boundingBox(),readout=await page.locator('#rolloverTimeReadout').boundingBox(),saveClock=await page.locator('#saveDayRolloverDial').boundingBox();
+      assert.ok(header.y+header.height<dial.y,'rollover title and dials must not overlap');
+      assert.ok(dial.y+dial.height<readout.y&&readout.y+readout.height<saveClock.y,'rollover dials, readout and save must not overlap');
+    }
+    await page.screenshot({path:path.join(root,'watch-android/preview-isolated-rollover-clock.png')});
+    await page.locator('#saveDayRolloverDial').click();
+    assert.equal(await page.locator('#dayRolloverDialog').isVisible(),false);
+    assert.equal(await page.locator('#openDayRolloverDial').textContent(),'09:30');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('watch-day-rollover-v1')),'09:30');
+    await page.locator('#openDayRolloverDial').click();
+    await page.evaluate(()=>{selectRolloverValue('hour',23,true);selectRolloverValue('minute',59,true);
+      const event=(type,x)=>{const touch=new Touch({identifier:1,target:document.body,clientX:x,clientY:198});document.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[touch],changedTouches:[touch]}));};
+      event('touchstart',80);event('touchmove',220);event('touchend',220);
+    });
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator('#dayRolloverDialog').isVisible(),false);
+    assert.equal(await page.locator('#manageScreen').isVisible(),true,'swiping back must preserve the settings screen');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('watch-day-rollover-v1')),'09:30','swiping without save must discard dial changes');
     console.log('Round home/detail geometry and full-screen modal swipe: PASS');
   }finally{await browser.close();server.close();}
 })().catch(error=>{console.error(error);server.close();process.exitCode=1;});

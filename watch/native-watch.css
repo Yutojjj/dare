@@ -130,6 +130,12 @@
 .native-web #timerDialog .timer-saved-choice { min-width:0; min-height:0; height:8.5cqw; padding:0; font-size:3.2cqw; gap:1cqw; }
 .native-web #timerDialog .timer-saved-choice button { align-self:stretch; min-height:0; min-width:14cqw; padding:0; border:0; border-radius:0; font-size:2.8cqw; }
 .native-web #timerDialog .timer-saved-empty { grid-column:1/-1; font-size:3cqw; text-align:center; margin:1cqw 0; }
+.native-web #cancelDayRolloverDial { display:none; }
+.native-web #openDayRolloverDial { min-width:23cqw; min-height:10cqw; padding:1cqw 2cqw; font-size:4.5cqw; }
+.native-web .day-rollover-dialog { padding:0; }
+.native-web .day-rollover-dialog .timer-dialog-header { position:absolute; top:14%; left:18%; right:18%; height:9%; min-height:0; }
+.native-web .day-rollover-dialog .time-wheel-picker { position:absolute; top:26%; left:14%; right:14%; margin:0; }
+.native-web .day-rollover-dialog .wheel-time-readout { position:absolute; top:63%; left:14%; right:14%; margin:0; height:5%; font-size:4cqw; line-height:1.2; }
 .native-web .watch-face { --watch-row-size:18cqw; }
 .native-web .watch-face.home-medium { --watch-row-size:22cqw; }
 .native-web .watch-face.home-large { --watch-row-size:27cqw; }

@@ -1150,7 +1150,43 @@ for (const [tabId, panelId] of [['floorSettingsTab', 'floorSettingsPanel'], ['al
   });
 }
 $('dayRolloverTime').value = rolloverTime;
-$('dayRolloverTime').addEventListener('change', () => { rolloverTime = $('dayRolloverTime').value || '06:00'; storage?.setItem(DAY_ROLLOVER_KEY, rolloverTime); lastAppliedDay = ''; applyDailyMembers(); render(); });
+$('openDayRolloverDial').textContent = rolloverTime;
+$('dayRolloverTime').addEventListener('change', () => { rolloverTime = $('dayRolloverTime').value || '06:00'; $('openDayRolloverDial').textContent = rolloverTime; storage?.setItem(DAY_ROLLOVER_KEY, rolloverTime); lastAppliedDay = ''; applyDailyMembers(); saveAlertSettings(); render(); });
+const rolloverDraft = { hour: 6, minute: 0 };
+function selectRolloverValue(type, value, scroll = false) {
+  rolloverDraft[type] = Math.max(0, Math.min(type === 'hour' ? 23 : 59, value));
+  const wheel = $(type === 'hour' ? 'rolloverHourWheel' : 'rolloverMinuteWheel');
+  [...wheel.children].forEach((option, index) => {
+    const selected = index === rolloverDraft[type];
+    option.classList.toggle('selected', selected); option.setAttribute('aria-selected', String(selected));
+  });
+  if (scroll) wheel.scrollTop = rolloverDraft[type] * (wheel.firstElementChild?.getBoundingClientRect().height || 42);
+  $('rolloverTimeReadout').textContent = `${String(rolloverDraft.hour).padStart(2,'0')}:${String(rolloverDraft.minute).padStart(2,'0')}`;
+}
+for (const type of ['hour','minute']) {
+  const wheel = $(type === 'hour' ? 'rolloverHourWheel' : 'rolloverMinuteWheel');
+  for (let value = 0; value < (type === 'hour' ? 24 : 60); value++) {
+    const option = document.createElement('button'); option.type = 'button'; option.className = 'wheel-option';
+    option.textContent = String(value).padStart(2,'0'); option.setAttribute('role','option');
+    option.setAttribute('aria-label',`${value}${type === 'hour' ? '時' : '分'}`);
+    option.onclick = () => selectRolloverValue(type,value,true); wheel.append(option);
+  }
+  wheel.addEventListener('scroll', () => { const height=wheel.firstElementChild?.getBoundingClientRect().height; if(height)selectRolloverValue(type,Math.round(wheel.scrollTop/height)); });
+  wheel.addEventListener('keydown', event => { if (event.key==='ArrowUp'||event.key==='ArrowDown') { event.preventDefault(); selectRolloverValue(type,rolloverDraft[type]+(event.key==='ArrowUp'?-1:1),true); } });
+}
+function closeDayRolloverDial() { $('dayRolloverDialog').hidden = true; }
+$('openDayRolloverDial').onclick = () => {
+  $('dayRolloverDialog').hidden = false;
+  const [hour,minute] = rolloverTime.split(':').map(Number);
+  selectRolloverValue('hour',hour,true); selectRolloverValue('minute',minute,true);
+};
+$('closeDayRolloverDial').onclick = closeDayRolloverDial;
+$('cancelDayRolloverDial').onclick = closeDayRolloverDial;
+$('saveDayRolloverDial').onclick = () => {
+  $('dayRolloverTime').value = $('rolloverTimeReadout').textContent;
+  closeDayRolloverDial(); $('dayRolloverTime').dispatchEvent(new Event('change'));
+};
+document.addEventListener('keydown', event => { if(event.key==='Escape')closeDayRolloverDial(); });
 function saveAlertSettings() {
   try { storage?.setItem(ALERT_SETTINGS_KEY, JSON.stringify(alertSettings)); } catch {}
   if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
@@ -1191,11 +1227,17 @@ function applyDailyMembers() {
   // registration time to repair those entries before applying the day rollover.
   let repaired = false;
   for (const cast of controller.state.casts) {
-    if (!cast.dayAdded || cast.dayDateVersion === 1) continue;
-    const initial = cast.history?.find(entry => entry.reason === '初期状態' && Number.isFinite(entry.at));
-    if (!initial || cast.dayAddedOn !== localDateKey(new Date(initial.at))) continue;
-    cast.dayAddedAt = initial.at;
-    cast.dayAddedOn = businessDateKey(new Date(initial.at));
+    if (!cast.dayAdded) continue;
+    let addedAt = cast.dayAddedAt;
+    if (!Number.isFinite(addedAt)) {
+      const initial = cast.history?.find(entry => entry.reason === '初期状態' && Number.isFinite(entry.at));
+      if (!initial || cast.dayAddedOn !== localDateKey(new Date(initial.at))) continue;
+      addedAt = initial.at;
+    }
+    const addedOn = businessDateKey(new Date(addedAt));
+    if (cast.dayAddedAt === addedAt && cast.dayAddedOn === addedOn && cast.dayDateVersion === 1) continue;
+    cast.dayAddedAt = addedAt;
+    cast.dayAddedOn = addedOn;
     cast.dayDateVersion = 1;
     repaired = true;
   }
