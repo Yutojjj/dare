@@ -111,7 +111,18 @@
 .native-web .wheel-colon { font-size:5cqw; }
 .native-web .wheel-time-readout { font-size:3.3cqw; margin-top:2cqw; }
 .native-web .timer-config-message { font-size:2.5cqw; }
-.native-web .timer-saved-choices { display:none; }
+.native-web #timerDialog .timer-dialog { padding:0; }
+.native-web #timerDialog .timer-dialog-header { position:absolute; top:13%; left:18%; right:18%; height:9%; min-height:0; }
+.native-web #timerDialog .time-wheel-picker { position:absolute; top:22%; left:12%; right:12%; height:27%; margin:0; }
+.native-web #timerDialog .time-wheel { height:27cqw; padding:9cqw 0; }
+.native-web #timerDialog .wheel-option, .native-web #timerDialog .time-wheel-column::after { height:9cqw; }
+.native-web #timerDialog .wheel-time-readout { position:absolute; top:49%; left:12%; right:12%; height:4%; margin:0; line-height:4cqw; }
+.native-web #timerDialog .timer-config-message { position:absolute; top:53%; left:12%; right:12%; height:5%; margin:0; line-height:1.2; }
+.native-web #timerDialog .timer-dialog-actions { top:59%; bottom:auto; left:12%; right:12%; height:9%; }
+.native-web #timerDialog .timer-saved-choices { position:absolute; top:70%; bottom:12%; left:18%; right:18%; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:8.5cqw; gap:1cqw; overflow-y:auto; align-content:start; }
+.native-web #timerDialog .timer-saved-choice { min-width:0; min-height:0; height:8.5cqw; padding:0; font-size:3.2cqw; gap:1cqw; }
+.native-web #timerDialog .timer-saved-choice button { align-self:stretch; min-height:0; min-width:14cqw; padding:0; border:0; border-radius:0; font-size:2.8cqw; }
+.native-web #timerDialog .timer-saved-empty { grid-column:1/-1; font-size:3cqw; text-align:center; margin:1cqw 0; }
 .native-web .watch-face { --watch-row-size:18cqw; }
 .native-web .watch-face.home-medium { --watch-row-size:22cqw; }
 .native-web .watch-face.home-large { --watch-row-size:27cqw; }

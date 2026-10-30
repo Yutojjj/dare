@@ -66,8 +66,34 @@ const server=http.createServer((req,res)=>{
     await page.evaluate(()=>openTimerDialog());
     await page.evaluate(()=>setWheelValue('seconds',30,true));
     assert.equal(await page.locator('#secondWheel .selected').textContent(),'30');
+    await page.evaluate(()=>{timerChoices=[300,330,420,720];renderTimer(controller.state.casts[0]);});
+    for(const width of [225,396]){
+      await page.setViewportSize({width,height:width});
+      const readout=await page.locator('#wheelTimeReadout').boundingBox(),message=await page.locator('#timerConfigMessage').boundingBox(),actions=await page.locator('#timerDialog .timer-dialog-actions').boundingBox(),choices=await page.locator('#timerSavedChoices').boundingBox();
+      assert.ok(readout.y+readout.height<=message.y+1,'time readout must not overlap the status');
+      assert.ok(message.y+message.height<=actions.y+1,'status must not overlap timer actions');
+      assert.ok(actions.y+actions.height<choices.y,'saved choices must appear below actions');
+      assert.equal(await page.locator('#timerSavedChoices button').count(),4);
+      const corners=await page.locator('#timerSavedChoices button').evaluateAll(buttons=>buttons.flatMap(button=>{const b=button.getBoundingClientRect();return [[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]];}));
+      assert.ok(corners.every(([x,y])=>Math.hypot(x-width/2,y-width/2)<=width/2),'delete buttons must fit inside the round screen');
+    }
+    const timerBefore=await page.evaluate(()=>JSON.stringify(controller.state.timers));
+    await page.getByRole('button',{name:'5分30秒候補を削除',exact:true}).click();
+    assert.equal(await page.locator('#timerSavedChoices button').count(),3);
+    assert.equal(await page.evaluate(()=>JSON.stringify(controller.state.timers)),timerBefore,'removing a shortcut must not modify a running timer');
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('watchTimerChoicesV2'))),[300,420,720]);
+    await page.evaluate(()=>{setWheelValue('minutes',5,true);setWheelValue('seconds',30,true);});
+    await page.locator('#saveTimerChoice').click();
+    assert.equal(await page.locator('#timerSavedChoices button').count(),4);
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-wheel.png')});
     await page.evaluate(()=>closeTimerDialog());
+    await page.evaluate(()=>showHome());
+    for(const mode of ['tables','name','time']){
+      await page.locator('#homeFilterButton').click();
+      assert.equal(await page.locator('#homeFilterButton').getAttribute('data-mode'),mode);
+      if(mode==='name')assert.equal(await page.locator('#homeFilterButton text').textContent(),'あ');
+      if(mode==='time')assert.equal(await page.locator('#homeFilterButton circle').count(),1);
+    }
     await page.setViewportSize({width:396,height:396});
     await page.evaluate(()=>openMemberActions(controller.state.casts[0].id));
     const modal=await page.locator('#memberActionsDialog').boundingBox();assert.equal(modal.height,396);

@@ -579,7 +579,8 @@ function renderTimer(cast) {
   presets.append(addButton);
   $('timerDialog').hidden = !timerDialogOpen;
   const savedChoices = $('timerSavedChoices');
-  if (savedChoices) {
+  if (savedChoices && savedChoices.dataset.signature !== timerChoices.join(',')) {
+    savedChoices.dataset.signature = timerChoices.join(',');
     savedChoices.replaceChildren();
     timerChoices.forEach(durationSeconds => {
       const row = document.createElement('div');
@@ -598,6 +599,11 @@ function renderTimer(cast) {
       row.append(label, remove);
       savedChoices.append(row);
     });
+    if (!timerChoices.length) {
+      const empty = document.createElement('p');
+      empty.className = 'timer-saved-empty'; empty.textContent = '保存した候補はありません';
+      savedChoices.append(empty);
+    }
   }
   $('saveTimerChoice').onclick = () => {
     const durationSeconds = selectedMinutes * 60 + selectedSeconds;
@@ -888,6 +894,20 @@ function render() {
   $('homeSearchButton').hidden = detailOpen || managerOpen;
   $('homeSizeButton').hidden = detailOpen || managerOpen;
   $('homeFilterButton').hidden = detailOpen || managerOpen;
+  const sortButton = $('homeFilterButton');
+  const sortLabels = { time: 'タイマー順', tables: '卓数の多い順', name: 'あいうえお順' };
+  sortButton.setAttribute('aria-label', `${sortLabels[homeSortMode]}。押すと表示順を切り替え`);
+  sortButton.title = sortLabels[homeSortMode];
+  sortButton.removeAttribute('aria-haspopup');
+  if (sortButton.dataset.mode !== homeSortMode) {
+    sortButton.dataset.mode = homeSortMode;
+    const symbol = {
+      time: '<circle cx="8" cy="12" r="6"/><path d="M8 8v4l3 2"/>',
+      name: '<text x=".5" y="17" font-size="15" font-family="sans-serif" fill="currentColor" stroke="none">あ</text>',
+      tables: '<path d="M2 8h12v7H2zM4 15v4m8-4v4"/>',
+    }[homeSortMode];
+    sortButton.innerHTML = `<svg viewBox="0 0 28 24" aria-hidden="true">${symbol}<path d="M23 4v15m-4-4 4 4 4-4"/></svg>`;
+  }
   $('homeSearchButton').classList.toggle('active', Boolean(homeSearchQuery));
   $('homeSizeButton').dataset.size = homeCardSize;
   $('homeSizeButton').textContent = ({ small: '小', medium: '中', large: '大' })[homeCardSize];
