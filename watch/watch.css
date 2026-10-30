@@ -366,3 +366,13 @@ button { color: inherit; font: inherit; touch-action: manipulation; border-radiu
   .cast-card, .table-choice, .timer-preset, .move-button { transition: background-color .12s ease, transform .12s ease; }
   button:active { filter: brightness(1.15); }
 }
+
+.performance-dialog { display: flex; flex-direction: column; width: 84%; max-height: 76%; gap: 6px; }
+.performance-date { margin: 0; text-align: center; font-size: 12px; color: #a0aebe; }
+.performance-rows { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.performance-row { padding: 6px 0 10px; border-bottom: 1px solid #41505f; text-align: center; }
+.performance-row strong { display: block; font-size: 14px; margin-bottom: 6px; overflow-wrap: anywhere; }
+.performance-stepper { display: grid; grid-template-columns: 48px minmax(0,1fr) 48px; align-items: center; gap: 8px; }
+.performance-stepper button { min-height: 38px; padding: 0; font-size: 22px; border-radius: 0; }
+.performance-stepper output { font-size: 26px; font-weight: bold; color: #f3f5f9; }
+.performance-dialog .timer-dialog-actions { flex-shrink: 0; }

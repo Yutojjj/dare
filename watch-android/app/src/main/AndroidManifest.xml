@@ -13,7 +13,7 @@
         android:roundIcon="@drawable/ic_watch"
         android:label="付け回し"
         android:usesCleartextTraffic="false"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@style/WatchTheme">
         <receiver android:name=".TimerReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -31,3 +31,4 @@
         </activity>
     </application>
 </manifest>
+

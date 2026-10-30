@@ -1,0 +1,16 @@
+<resources>
+    <style name="WatchTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#F3F5F9</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">#0F141B</item>
+        <item name="android:alertDialogTheme">@style/WatchDialog</item>
+    </style>
+    <style name="WatchDialog" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowMinWidthMajor">78%</item>
+        <item name="android:windowMinWidthMinor">78%</item>
+        <item name="android:colorAccent">#F3F5F9</item>
+        <item name="android:windowBackground">#0F141B</item>
+    </style>
+</resources>

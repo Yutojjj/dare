@@ -1,0 +1,90 @@
+/* Full-screen phone layout for the same shared watch controls and Firebase data. */
+html, body { min-height: 100%; }
+body { min-height: 100svh; background: #090b0f; }
+.watch-stage { display: block; width: 100%; height: auto; min-height: 100svh; padding: 0; }
+.watch-face { width: min(100%, 760px); min-height: 100svh; height: auto; aspect-ratio: auto; margin: 0 auto; padding: max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left)); overflow: visible; border: 0; border-radius: 0; box-shadow: none; container-type: inline-size; }
+.watch-header, .watch-face.home-open .watch-header { display: grid; min-height: 48px; grid-template-columns: 48px minmax(0,1fr) 48px; gap: 8px; margin: 0 0 14px; }
+.watch-face.manage-open .watch-header { grid-template-columns: 48px minmax(0,1fr) 48px; margin: 0 0 14px; }
+.watch-title { font-size: 20px; }
+.header-icon-button { width: 46px; height: 46px; }
+.home-toolbar { position: static; display: grid; gap: 12px; margin: 0 0 14px; }
+.home-clock { position: static; justify-self: center; transform: none; font-size: 22px; }
+.home-tool-buttons { display: grid; width: min(100%, 420px); grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 0 auto; }
+.watch-face.home-open .home-search-button, .watch-face.home-open .home-size-button, .watch-face.home-open .home-filter-button, .watch-face.home-open .home-settings-button,
+.home-search-button, .home-size-button, .home-filter-button, .home-settings-button { position: static; width: 48px; height: 48px; min-height: 48px; justify-self: center; margin: 0; padding: 8px; transform: none; }
+.manage-open-button.home-settings-button { width: 48px; }
+.watch-face.home-open #homeScreen { padding: 0; }
+.watch-content { flex: initial; min-height: 0; overflow: visible; padding: 0; }
+.cast-list { gap: 0; }
+.cast-list-row { gap: 8px; padding: 4px 0; }
+.cast-card { min-height: 64px; grid-template-columns: minmax(72px,20%) minmax(0,1fr) auto; gap: 8px; padding: 8px 6px; }
+.cast-card-name { font-size: 16px; }
+.cast-card-route-stop strong { max-width: none; font-size: 14px; }
+.cast-card-route-stop { margin-right: 8px; }
+.cast-card-timer { min-width: 54px; font-size: 17px; }
+.cast-timer-action, .cast-next-button { flex-basis: 44px; width: 44px; height: 44px; font-size: 17px; }
+.cast-next-button svg { width: 23px; height: 23px; }
+.add-member-home-button { position: static; min-height: 52px; margin-top: 12px; border: 1px solid var(--watch-line); font-size: 15px; }
+.detail-screen { gap: 10px; padding: 0 0 14px; }
+.current-table-card { min-height: 94px; gap: 12px; padding: 8px 4px 14px; border-bottom: 1px solid var(--watch-line); }
+.route-endpoint span { font-size: 13px; }
+.route-endpoint strong, .route-destination-button { font-size: clamp(22px,7cqw,36px); }
+.route-arrow { font-size: 30px; }
+.timer-section { min-height: 0; gap: 12px; margin-top: 0; padding-top: 14px; }
+.timer-top-group { width: 100%; }
+.timer-display-row { min-height: 126px; flex-basis: 126px; display: grid; grid-template-columns: minmax(68px,1fr) minmax(120px,2fr) minmax(68px,1fr); align-items: center; gap: 8px; }
+.timer-display { position: static; grid-column: 2; width: 100%; font-size: clamp(56px,15cqw,84px); transform: none; }
+.timer-adjust-actions { position: static; grid-row: 1; display: grid; gap: 8px; transform: none; }
+.timer-adjust-actions-left { grid-column: 1; }
+.timer-adjust-actions:not(.timer-adjust-actions-left) { grid-column: 3; }
+.timer-adjust-actions button { min-width: 0; min-height: 42px; font-size: 13px; }
+.timer-notice { margin-top: 4px; font-size: 14px; }
+.timer-controls { gap: 8px; margin-top: 4px; }
+.timer-controls button { min-height: 54px; font-size: 27px; }
+.timer-presets { gap: 8px; margin-top: 0; }
+.timer-preset, .timer-presets[data-count="4"] .timer-preset, .timer-presets[data-count="5"] .timer-preset { min-height: 48px; font-size: 16px; }
+.detail-actions { width: 100%; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
+.detail-actions button { min-height: 52px; font-size: 15px; }
+.move-button { min-height: 58px; margin-top: 4px; font-size: 17px; }
+.manage-screen { padding-top: 0; }
+.settings-tabs { gap: 8px; margin: 0 0 14px; }
+.settings-tabs button { min-height: 48px; font-size: 14px; }
+.floor-list { gap: 10px; }
+.floor-accordion-toggle { min-height: 56px; }
+.floor-accordion-name { font-size: 16px; }
+.floor-name-input, .table-name-input { min-height: 44px; font-size: 15px; }
+.small-danger-button, .add-table-button { min-height: 42px; font-size: 13px; }
+.add-floor-button { min-height: 52px; font-size: 15px; }
+.alert-setting-row { min-height: 58px; font-size: 15px; }
+.advance-alert-options { gap: 8px; }
+.advance-alert-options button { min-height: 48px; font-size: 14px; }
+.alert-settings-note { max-width: 100%; font-size: 13px; }
+.timer-dialog-backdrop { position: fixed; inset: 0; z-index: 20; padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); overflow: auto; }
+.timer-dialog { width: min(100%,680px); max-height: calc(100dvh - 24px); padding: 18px; }
+.timer-dialog-header { grid-template-columns: minmax(0,1fr) 44px; gap: 8px; }
+.timer-dialog-header h2 { font-size: 20px; }
+.timer-dialog-close { width: 44px; height: 44px; font-size: 28px; }
+.timer-dialog-hint, .route-editor-hint { font-size: 13px; }
+.timer-dialog-actions { gap: 8px; margin-top: 10px; }
+.timer-dialog-actions button, .timer-saved-choice button { min-height: 48px; font-size: 14px; }
+.member-picker-dialog { min-height: min(70vh,520px); }
+.member-picker-dialog .timer-dialog-header { grid-template-columns: minmax(0,1fr) auto 44px; }
+.member-day-filter-toggle { min-height: 40px; padding: 6px 10px; font-size: 12px; }
+.member-picker-status { min-height: 18px; font-size: 12px; }
+.member-picker-row { min-height: 52px; padding: 5px 6px; }
+.member-picker-name { font-size: 16px; }
+.member-picker-action { min-width: 68px; min-height: 42px; font-size: 13px; }
+.route-editor-dialog { max-height: calc(100dvh - 24px); }
+.route-editor-floor { font-size: 13px; }
+.route-editor-choice { min-height: 54px; padding: 8px; }
+.route-choice-name { font-size: 14px; }
+.route-choice-number { width: 28px; height: 28px; flex-basis: 28px; font-size: 14px; }
+.history-list { max-height: 55vh; font-size: 15px; }
+.history-list li { padding: 12px 4px; }
+.watch-toast { position: fixed; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); left: 14px; z-index: 30; font-size: 15px; }
+@media (min-width: 700px) {
+  .watch-face { padding-right: 24px; padding-left: 24px; }
+  .cast-card { min-height: 72px; }
+  .cast-card-name { font-size: 18px; }
+  .cast-card-route-stop strong { font-size: 16px; }
+}

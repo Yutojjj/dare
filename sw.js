@@ -1,10 +1,13 @@
-const CACHE_NAME = 'member-management-pwa-v67';
+const CACHE_NAME = 'member-management-pwa-v69';
 const APP_SHELL = [
   '/dare.html',
   '/watch/',
   '/watch/watch.css',
   '/watch/watch-app.js',
   '/watch/watch-core.js',
+  '/watch/phone.html',
+  '/watch/phone.css',
+  '/watch/phone-mode.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -52,3 +55,4 @@ self.addEventListener('fetch', event => {
     return response;
   })));
 });
+

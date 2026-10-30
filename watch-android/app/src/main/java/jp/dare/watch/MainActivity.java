@@ -1,182 +1,180 @@
 package jp.dare.watch;
 
-import android.app.Activity;
-import android.graphics.Color;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.app.*;
+import android.os.*;
+import android.graphics.*;
+import android.view.*;
+import android.widget.*;
+import org.json.*;
+import java.util.*;
 
+/** Native Wear OS surface. Coordinates use the existing 396px round watch design. */
 public final class MainActivity extends Activity {
-    private static final String WATCH_URL = "https://dare-alpha-ten.vercel.app/watch/";
-    private static final String WATCH_HOST = "dare-alpha-ten.vercel.app";
+ private static final float HOME_LIST_TOP=138,HOME_LIST_BOTTOM=396;
+ private WatchRepository repo; private NativeTimers alarms; private Face face;
+ private final Handler handler=new Handler(Looper.getMainLooper());
+ private android.content.SharedPreferences prefs;
+ private final java.util.ArrayDeque<String> modalBackStack=new java.util.ArrayDeque<>();
+ private final java.util.ArrayDeque<JSONObject> noticeQueue=new java.util.ArrayDeque<>();private JSONObject currentNotice;private String noticeReturnPopup="";private int noticeReturnScroll;
+ private String moveCast,moveFrom,moveTo;private boolean moveSaving=false;
 
-    private WebView webView;
-    private View errorPanel;
-    private boolean pageFailed;
-    private boolean started;
-    private NativeTimers nativeTimers;
-
-    @Override
-    protected void onCreate(Bundle state) {
-        super.onCreate(state);
-        nativeTimers = new NativeTimers(this);
-        getWindow().setStatusBarColor(Color.BLACK);
-        getWindow().setNavigationBarColor(Color.BLACK);
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-
-        FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.rgb(9, 11, 15));
-        webView = new WebView(this);
-        webView.setBackgroundColor(Color.rgb(9, 11, 15));
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setSupportZoom(false);
-        settings.setBuiltInZoomControls(false);
-        webView.addJavascriptInterface(nativeTimers, "DareWatchNative");
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                android.net.Uri url = request.getUrl();
-                return !"https".equals(url.getScheme())
-                        || !WATCH_HOST.equals(url.getHost())
-                        || !url.getPath().startsWith("/watch");
-            }
-
-            @Override
-            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-                pageFailed = false;
-                errorPanel.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) {
-                    pageFailed = true;
-                    errorPanel.setVisibility(View.VISIBLE);
-                }
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                if (!pageFailed) errorPanel.setVisibility(View.GONE);
-                android.net.Uri uri = android.net.Uri.parse(url);
-                if (!pageFailed && "https".equals(uri.getScheme()) && WATCH_HOST.equals(uri.getHost())
-                        && uri.getPath().startsWith("/watch/")) {
-                    view.evaluateJavascript("(() => { if(window.__dareNativeTimers) return; window.__dareNativeTimers=true;"
-                        + "const sync=()=>{try{const raw=localStorage.getItem('cast-watch-v1');if(raw){const state=JSON.parse(raw);state.notificationSettings=JSON.parse(localStorage.getItem('watch-alert-settings-v1')||'null');DareWatchNative.syncTimers(JSON.stringify(state));}}catch(e){}};"
-                        + "const original=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){original.call(this,k,v);if(k==='cast-watch-v1'||k==='watch-alert-settings-v1')sync();};"
-                        + "window.addEventListener('pagehide',sync);sync();"
-                        + "try{Object.defineProperty(navigator,'vibrate',{value:()=>true});}catch(e){}"
-                        + "})()", null);
-                }
-            }
-        });
-        root.addView(webView, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        LinearLayout error = new LinearLayout(this);
-        error.setOrientation(LinearLayout.VERTICAL);
-        error.setGravity(Gravity.CENTER);
-        error.setPadding(dp(34), dp(24), dp(34), dp(24));
-        error.setBackgroundColor(Color.rgb(9, 11, 15));
-        TextView message = new TextView(this);
-        message.setText("ウォッチ画面を読み込めませんでした。\n通信を確認して再試行してください。");
-        message.setTextColor(Color.WHITE);
-        message.setTextSize(15);
-        message.setGravity(Gravity.CENTER);
-        error.addView(message);
-        Button retry = new Button(this);
-        retry.setText("再試行");
-        retry.setTextColor(Color.WHITE);
-        retry.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(56, 68, 81)));
-        LinearLayout.LayoutParams retryParams = new LinearLayout.LayoutParams(dp(130), dp(48));
-        retryParams.topMargin = dp(16);
-        error.addView(retry, retryParams);
-        retry.setOnClickListener(v -> webView.loadUrl(WATCH_URL));
-        errorPanel = error;
-        errorPanel.setVisibility(View.GONE);
-        root.addView(errorPanel, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        setContentView(root);
-
-        if (state != null) webView.restoreState(state);
-        if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED)
-            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 20);
-        else requestTimerPermission();
+ private String selected=null,popup="",floorId=null,status="接続中",search="",sort="time";
+ private final LinkedHashMap<String,Double> metricBase=new LinkedHashMap<>(),metricDraft=new LinkedHashMap<>(); private LinkedHashMap<String,String> metricFields=new LinkedHashMap<>(); private String metricCast,metricDate; private boolean metricsSaving=false;
+ private String routeCast=null; private JSONObject adding=null; private final ArrayList<String> route=new ArrayList<>();
+ private int dialMinute=5,dialSecond=0; private boolean today=false,active=false; private int size=0,scroll=0; private long lastFetch=0;
+ private final ArrayList<Integer> choices=new ArrayList<>();
+ private final Runnable tick=new Runnable(){public void run(){if(!active)return;face.invalidate();if(System.currentTimeMillis()-lastFetch>3000){lastFetch=System.currentTimeMillis();repo.refresh();}handler.postDelayed(this,250);}};
+ @Override public void onCreate(Bundle state){super.onCreate(state);prefs=getSharedPreferences("native-display",0);if(!prefs.getBoolean("expandedSizesV1",false))prefs.edit().putInt("size",0).putBoolean("expandedSizesV1",true).apply();size=prefs.getInt("size",0);sort=prefs.getString("sort","time");try{JSONArray a=new JSONArray(prefs.getString("choices","[300,420,720]"));for(int i=0;i<a.length();i++)choices.add(a.getInt(i));}catch(Exception ignored){}
+  getWindow().getDecorView().setSystemUiVisibility(5894);getWindow().setStatusBarColor(Color.BLACK);getWindow().setNavigationBarColor(Color.BLACK);
+  alarms=new NativeTimers(this);face=new Face();setContentView(face);
+  repo=new WatchRepository(this,(s,message)->{status=message;try{JSONObject snapshot=new JSONObject(s.toString());snapshot.put("notificationSettings",alertSettings());alarms.syncTimers(snapshot.toString());}catch(Exception ignored){}if(WatchModel.expired(s))repo.change(WatchModel::rollover);face.invalidate();});
+  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},20);
+ }
+ @Override protected void onResume(){super.onResume();NativeTimers.foregroundActive=true;NativeTimers.foregroundAlert=this::openTimerNotice;active=true;handler.removeCallbacks(tick);handler.post(tick);if(alarms!=null)alarms.restore();}
+ @Override protected void onPause(){NativeTimers.foregroundActive=false;NativeTimers.foregroundAlert=null;active=false;handler.removeCallbacks(tick);super.onPause();}
+ @Override protected void onDestroy(){repo.close();super.onDestroy();}
+ @Override public void onBackPressed(){if((metricsSaving&&popup.equals("metrics"))||(moveSaving&&popup.equals("moveConfirm")))return;if(popup.isEmpty()&&selected==null){super.onBackPressed();return;}face.settleBack(true);}
+ private void finishBack(){if(popup.equals("timerNotice")){if(!noticeQueue.isEmpty())currentNotice=noticeQueue.removeFirst();else{popup=noticeReturnPopup;scroll=noticeReturnScroll;currentNotice=null;}return;}if(!popup.isEmpty()){popup=modalBackStack.isEmpty()?"":modalBackStack.pop();scroll=0;}else selected=null;}
+ private JSONObject state(){return repo==null?new JSONObject():repo.state;}
+ private void change(WatchRepository.Change c){repo.change(c);}
+ private void show(String which){if(!popup.isEmpty()&&!popup.equals(which))modalBackStack.push(popup);else if(popup.isEmpty())modalBackStack.clear();popup=which;scroll=0;if(which.equals("members"))face.memberOffset=0;face.invalidate();}
+ private void notifyText(String text){Toast.makeText(this,text,Toast.LENGTH_SHORT).show();}
+ private JSONObject alertSettings(){try{return new JSONObject(prefs.getString("alerts","{\"advanceSecondsList\":[],\"endEnabled\":true,\"vibration\":true}"));}catch(Exception e){return new JSONObject();}}
+ private void saveAlerts(JSONObject s){prefs.edit().putString("alerts",s.toString()).apply();try{JSONObject copy=new JSONObject(state().toString());copy.put("notificationSettings",s);alarms.syncTimers(copy.toString());}catch(Exception ignored){}face.invalidate();}
+ private void input(String title,String value,java.util.function.Consumer<String> save){EditText entry=new EditText(this);entry.setSingleLine(true);entry.setText(value);entry.setSelectAllOnFocus(true);entry.setTextColor(Color.WHITE);entry.setTextSize(16);LinearLayout box=new LinearLayout(this);box.setPadding(24,8,24,8);box.addView(entry,new LinearLayout.LayoutParams(-1,-2));AlertDialog d=new AlertDialog.Builder(this).setTitle(title).setView(box).setPositiveButton("保存",(a,b)->{String v=entry.getText().toString().trim();if(!v.isEmpty()||title.contains("検索"))save.accept(v);}).create();d.show();d.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*.8),-2);}
+ private void confirm(String title,Runnable action){new AlertDialog.Builder(this).setMessage(title).setPositiveButton("OK",(d,w)->action.run()).show();}
+ private void memberMenu(String id){JSONObject c=WatchModel.cast(state(),id);if(c==null)return;new AlertDialog.Builder(this).setTitle(c.optString("name")).setItems(new String[]{"推移卓を編集","メンバーを削除"},(d,n)->{if(n==0)editRoute(id,null);else confirm(c.optString("name")+"を一覧から削除しますか？",()->change(s->WatchModel.remove(s,id)));}).show();}
+ private void editRoute(String id,JSONObject member){routeCast=id;adding=member;route.clear();JSONObject c=WatchModel.cast(state(),id);if(c!=null){JSONArray a=c.optJSONArray("nominatedTableIds");if(a!=null)for(int i=0;i<a.length();i++)route.add(a.optString(i));}show("route");}
+ private void saveRoute(){if(route.isEmpty()){notifyText("卓を1つ以上選択してください");return;}final ArrayList<String> picked=new ArrayList<>(route);final JSONObject member=adding;final String id=routeCast;change(s->{JSONObject c=WatchModel.cast(s,id);if(c==null&&member!=null){c=new JSONObject().put("id",id).put("name",member.optString("name")).put("history",new JSONArray()).put("undoStack",new JSONArray()).put("dayAdded",true).put("dayAddedOn",WatchModel.day());WatchRepository.array(s,"casts").put(c);}if(c==null)return;c.put("nominatedTableIds",new JSONArray(picked));String current=c.optString("currentTableId");if(!picked.contains(current)){current=picked.get(0);c.put("currentTableId",current);}int at=picked.indexOf(current);Object next=picked.size()>1?picked.get((at+1)%picked.size()):JSONObject.NULL;c.put("nextTableId",next).put("destinationTableId",next);});popup="";face.invalidate();}
+ private void openTimerNotice(JSONObject entry){if(popup.equals("timerNotice")){if(currentNotice!=null&&currentNotice.optString("castId").equals(entry.optString("castId")))currentNotice=entry;else noticeQueue.addLast(entry);}else{noticeReturnPopup=popup;noticeReturnScroll=scroll;currentNotice=entry;popup="timerNotice";}face.invalidate();}
+ private void requestMove(String id){JSONObject cast=WatchModel.cast(state(),id);if(cast==null)return;String to=cast.optString("destinationTableId");if(to.isEmpty()||to.equals("null")||to.equals(cast.optString("currentTableId")))return;moveCast=id;moveFrom=cast.optString("currentTableId");moveTo=to;moveSaving=false;show("moveConfirm");}
+ private void approveMove(){if(moveSaving)return;moveSaving=true;final String id=moveCast,from=moveFrom,to=moveTo;repo.change(s->{JSONObject cast=WatchModel.cast(s,id);if(cast==null||!from.equals(cast.optString("currentTableId"))||!to.equals(cast.optString("destinationTableId")))throw new IllegalArgumentException("卓の状態が変更されました。もう一度確認してください");WatchModel.move(s,id);},error->{moveSaving=false;if(error==null){if(popup.equals("timerNotice"))noticeReturnPopup="";else popup="";modalBackStack.clear();}else notifyText(error);face.invalidate();});}
+ private void openMetrics(String id){notifyText("実績を読み込み中…");repo.loadMetrics(error->{if(error!=null){notifyText(error);return;}if(WatchMetrics.member(repo.members,id)==null){notifyText("管理アプリに登録されたキャストを選んでください");return;}metricCast=id;metricDate=WatchModel.day();metricFields=WatchMetrics.definitions(repo.members);metricBase.clear();metricDraft.clear();for(String key:metricFields.keySet()){double value=WatchMetrics.value(repo.members,id,metricDate,key);metricBase.put(key,value);metricDraft.put(key,value);}metricsSaving=false;show("metrics");});}
+ private void saveMetrics(){if(metricsSaving)return;metricsSaving=true;LinkedHashMap<String,Double> deltas=new LinkedHashMap<>();for(String key:metricDraft.keySet())deltas.put(key,metricDraft.get(key)-metricBase.get(key));repo.saveMetrics(metricCast,metricDate,deltas,error->{metricsSaving=false;if(error==null){if(popup.equals("timerNotice"))noticeReturnPopup="";else popup="";notifyText("保存しました");}else notifyText(error);face.invalidate();});}
+ private void timePicker(){dialMinute=5;dialSecond=0;show("time");}
+ private void dial(int wheel,int delta){if(wheel==0)dialMinute=Math.max(0,Math.min(240,dialMinute+delta));else dialSecond=(dialSecond+delta*10+60)%60;if(dialMinute==240)dialSecond=0;face.performHapticFeedback(4);face.invalidate();}
+ private static String clock(long ms){long sec=(ms+999)/1000;return String.format(Locale.JAPAN,"%d:%02d",sec/60,sec%60);}
+ private static String stamp(long at){return new java.text.SimpleDateFormat("MM/dd HH:mm:ss",Locale.JAPAN).format(new Date(at));}
+ private static String id(){return "native-"+UUID.randomUUID();}
+ private final class Hit {RectF rect;Runnable click,hold;Hit(RectF r,Runnable c,Runnable h){rect=r;click=c;hold=h;}}
+ private final class Face extends View {
+  private final java.util.HashMap<String,Float> positions=new java.util.HashMap<>(); private final Paint p=new Paint(3);private Canvas canvas;private final ArrayList<Hit> hits=new ArrayList<>();private float scale,ox,oy,downY,downX,lastTouchY,homeOffset,maxHomeOffset,memberOffset,maxMemberOffset,edgeDx;private boolean edgeCandidate,edgeSwiping,edgeSettling;private Hit pressed;private boolean moved,held;private final Runnable longPress=()->{if(pressed!=null&&pressed.hold!=null&&!moved){held=true;performHapticFeedback(0);pressed.hold.run();}};
+  final int WHITE=Color.rgb(243,245,249),DIM=Color.rgb(160,174,190),LINE=Color.rgb(65,80,95),YELLOW=Color.rgb(244,212,76),BG=Color.rgb(15,20,27);
+  Face(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+  @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){super.onSizeChanged(w,h,oldw,oldh);setSystemGestureExclusionRects(java.util.Collections.singletonList(new Rect(0,0,Math.round(w*.12f),h)));}
+  void text(String s,float x,float y,float font,int color,boolean bold){p.setColor(color);p.setStyle(Paint.Style.FILL);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);p.setTextSize(font);canvas.drawText(s,x,y,p);}
+  void center(String s,float x,float y,float font,int color,boolean bold){p.setTextSize(font);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);text(s,x-p.measureText(s)/2,y,font,color,bold);}
+  String fit(String s,float width,float font){p.setTextSize(font);p.setTypeface(Typeface.DEFAULT_BOLD);while(s.length()>1&&p.measureText(s)>width)s=s.substring(0,s.length()-1);return s;}
+  void line(float x,float y,float x2,float y2){p.setColor(LINE);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1);canvas.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
+  void button(String label,float x,float y,float w,float h,Runnable action){button(label,x,y,w,h,WHITE,false,action,null);}
+  void button(String label,float x,float y,float w,float h,int color,boolean fill,Runnable action,Runnable hold){RectF r=new RectF(x,y,x+w,y+h);p.setColor(fill?YELLOW:LINE);p.setStyle(fill?Paint.Style.FILL:Paint.Style.STROKE);p.setStrokeWidth(1);canvas.drawRect(r,p);p.setStyle(Paint.Style.FILL);center(label,x+w/2,y+h/2+5,Math.min(14,h*.38f),fill?BG:color,true);hits.add(new Hit(r,action,hold));}
+  void icon(String type,float x,float y,float r,Runnable action){icon(type,x,y,r,action,true);}
+  void icon(String type,float x,float y,float r,Runnable action,boolean outline){p.setColor(LINE);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.2f);if(outline)canvas.drawCircle(x,y,r,p);canvas.save();float glyphScale=Math.max(1,r/21f);canvas.scale(glyphScale,glyphScale,x,y);p.setColor(WHITE);p.setStrokeWidth(1.8f);if(type.equals("search")){canvas.drawCircle(x-2,y-2,5,p);canvas.drawLine(x+2,y+2,x+7,y+7,p);}else if(type.equals("close")){canvas.drawLine(x-5,y-5,x+5,y+5,p);canvas.drawLine(x+5,y-5,x-5,y+5,p);}else if(type.equals("play")){Path a=new Path();a.moveTo(x-3,y-6);a.lineTo(x+6,y);a.lineTo(x-3,y+6);a.close();p.setStyle(Paint.Style.FILL);canvas.drawPath(a,p);}else if(type.equals("pause")){canvas.drawLine(x-3,y-6,x-3,y+6,p);canvas.drawLine(x+3,y-6,x+3,y+6,p);}else if(type.equals("next")){canvas.drawLine(x-6,y,x+4,y,p);canvas.drawLine(x,y-5,x+5,y,p);canvas.drawLine(x,y+5,x+5,y,p);canvas.drawLine(x+7,y-6,x+7,y+6,p);}else if(type.equals("sort")){canvas.drawLine(x-6,y-5,x+2,y-5,p);canvas.drawLine(x-6,y,x,y,p);canvas.drawLine(x-6,y+5,x-2,y+5,p);canvas.drawLine(x+6,y-6,x+6,y+6,p);canvas.drawLine(x+2,y+2,x+6,y+6,p);canvas.drawLine(x+10,y+2,x+6,y+6,p);}else if(type.equals("gear")){for(int i=0;i<8;i++){double a=i*Math.PI/4;canvas.drawLine(x+(float)Math.cos(a)*7,y+(float)Math.sin(a)*7,x+(float)Math.cos(a)*10,y+(float)Math.sin(a)*10,p);}canvas.drawCircle(x,y,7,p);canvas.drawCircle(x,y,3,p);}else if(type.equals("history")){canvas.drawArc(x-7,y-7,x+7,y+7,200,300,false,p);canvas.drawLine(x-7,y-6,x-7,y,p);canvas.drawLine(x-7,y,x-2,y,p);canvas.drawLine(x,y-4,x,y,p);canvas.drawLine(x,y,x+4,y+2,p);}else{p.setStyle(Paint.Style.FILL);center(type,x,y+5,14,WHITE,true);}canvas.restore();p.setStyle(Paint.Style.FILL);hits.add(new Hit(new RectF(x-r,y-r,x+r,y+r),action,null));}
+  @Override protected void onDraw(Canvas c){canvas=c;hits.clear();scale=Math.min(getWidth(),getHeight())/396f;ox=(getWidth()-396*scale)/2;oy=(getHeight()-396*scale)/2;c.drawColor(Color.rgb(9,11,15));c.save();c.translate(ox,oy);c.scale(scale,scale);Path circle=new Path();circle.addCircle(198,198,197,Path.Direction.CW);c.clipPath(circle);p.setColor(BG);c.drawCircle(198,198,198,p);if(selected==null)home();else if(edgeSwiping&&popup.isEmpty()){home();hits.clear();c.save();c.translate(edgeDx,0);p.setColor(BG);c.drawRect(0,0,396,396,p);detail();c.restore();}else detail();if(!popup.isEmpty()){if(edgeSwiping){String previousModal=popup.equals("timerNotice")?noticeReturnPopup:modalBackStack.peek();if(previousModal!=null&&!previousModal.isEmpty()){String currentModal=popup;popup=previousModal;overlay();popup=currentModal;}}c.save();if(edgeSwiping)c.translate(edgeDx,0);overlay();c.restore();}c.restore();}
+  int timerColor(JSONObject t){if(t==null)return WHITE;long ms=WatchModel.remaining(t);return ms<30000?Color.rgb(255,74,88):ms<60000?Color.rgb(255,160,62):WHITE;}
+  void segmentIcon(String type,float left,float top,float width,float height,Runnable action){icon(type,left+width/2,top+height/2,height>44?Math.min(30,height*.4f):20,action,false);hits.add(new Hit(new RectF(left,top,left+width,top+height),action,null));}
+  void home(){
+   center(new java.text.SimpleDateFormat("HH:mm",Locale.JAPAN).format(new Date()),198,28,18,WHITE,true);
+   segmentIcon(new String[]{"小","中","大"}[size],0,44,132,44,()->{size=(size+1)%3;homeOffset=0;positions.clear();prefs.edit().putInt("size",size).apply();invalidate();});
+   segmentIcon("sort",132,44,132,44,()->{sort=sort.equals("time")?"tables":sort.equals("tables")?"name":"time";prefs.edit().putString("sort",sort).apply();notifyText(sort.equals("time")?"タイマー順":sort.equals("tables")?"卓数の多い順":"あいうえお順");invalidate();});
+   segmentIcon("gear",264,44,132,44,()->show("settings"));
+   line(0,44,396,44);line(0,88,396,88);line(132,44,132,88);line(264,44,264,88);
+   center("メンバーを追加＋",198,115,15,WHITE,true);line(0,132,396,132);
+   hits.add(new Hit(new RectF(0,88,396,132),()->{repo.loadMembers(()->show("members"));},null));
+   JSONArray casts=state().optJSONArray("casts");ArrayList<JSONObject> list=new ArrayList<>();if(casts!=null)for(int i=0;i<casts.length();i++){JSONObject v=casts.optJSONObject(i);list.add(v);}list.sort((a,b)->{if(sort.equals("name"))return java.text.Collator.getInstance(Locale.JAPAN).compare(a.optString("name"),b.optString("name"));if(sort.equals("tables"))return Integer.compare(b.optJSONArray("nominatedTableIds").length(),a.optJSONArray("nominatedTableIds").length());JSONObject ta=WatchModel.timer(state(),a.optString("id")),tb=WatchModel.timer(state(),b.optString("id"));return Long.compare(ta==null?Long.MAX_VALUE:WatchModel.remaining(ta),tb==null?Long.MAX_VALUE:WatchModel.remaining(tb));});
+   float row=new float[]{62,66,92}[size];maxHomeOffset=Math.max(0,list.size()*row-(HOME_LIST_BOTTOM-HOME_LIST_TOP)+84);homeOffset=Math.max(0,Math.min(homeOffset,maxHomeOffset));int first=(int)(homeOffset/row);float y=HOME_LIST_TOP+first*row-homeOffset;int rowHitStart=hits.size();canvas.save();canvas.clipRect(0,HOME_LIST_TOP,396,HOME_LIST_BOTTOM);
+   for(int i=first;i<list.size()&&y<HOME_LIST_BOTTOM;i++){JSONObject cast=list.get(i);String id=cast.optString("id");JSONObject t=WatchModel.timer(state(),id);float targetY=y;float priorY=positions.getOrDefault(id,y);y=priorY+(targetY-priorY)*.35f;if(Math.abs(y-targetY)<.5f)y=targetY;else postInvalidateDelayed(16);positions.put(id,y);hits.add(new Hit(new RectF(0,y,258,y+row),()->{selected=id;scroll=0;invalidate();},()->memberMenu(id)));
+    float labelY=y+row*.40f;float font=17+size*2;
+    text(fit(cast.optString("name"),65,font),22,labelY,font,WHITE,true);
+    JSONArray route=cast.optJSONArray("nominatedTableIds");float x=94;
+    if(route!=null)for(int n=0;n<Math.min(route.length(),4);n++){
+     String table=route.optString(n),label=fit(WatchModel.name(state(),table),25,12+size);
+     boolean current=table.equals(cast.optString("currentTableId"));
+     if(current){p.setColor(YELLOW);canvas.drawRect(x-2,labelY-15,x+25,labelY+5,p);}
+     text(label,x,labelY,12+size,current?BG:WHITE,true);x+=27;
+     if(n<Math.min(route.length(),4)-1){text("→",x,labelY,9,DIM,false);x+=5;}
     }
-
-    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (requestCode == 20) requestTimerPermission();
-    }
-
-    private void requestTimerPermission() {
-        if (android.os.Build.VERSION.SDK_INT < 31 || getSystemService(android.app.AlarmManager.class).canScheduleExactAlarms()
-                || getPreferences(0).getBoolean("alarmPermissionAsked", false)) return;
-        getPreferences(0).edit().putBoolean("alarmPermissionAsked", true).apply();
-        new android.app.AlertDialog.Builder(this).setMessage("画面を閉じている間もタイマー終了を知らせるため、次の画面でアラームの使用を許可してください。")
-            .setPositiveButton("設定を開く", (dialog, which) -> {
-                try { startActivity(new android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    android.net.Uri.parse("package:" + getPackageName()))); } catch (android.content.ActivityNotFoundException ignored) { }
-            }).setNegativeButton("あとで", null).show();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        webView.onResume();
-        nativeTimers.restore();
-        if (started) webView.loadUrl(WATCH_URL);
-        else {
-            started = true;
-            if (webView.getUrl() == null) webView.loadUrl(WATCH_URL);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        webView.onPause();
-        super.onPause();
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        webView.saveState(outState);
-        super.onSaveInstanceState(outState);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
-    }
-
-    @Override
-    protected void onDestroy() {
-        webView.destroy();
-        super.onDestroy();
-    }
-
-    private int dp(int size) {
-        return Math.round(size * getResources().getDisplayMetrics().density);
-    }
+    line(0,y+row/2,258,y+row/2);
+    center(t==null?"未開始":clock(WatchModel.remaining(t)),159,y+row*.90f,24+size*4,timerColor(t),true);
+    float radius=24+size*4;
+    icon(t!=null&&!t.optBoolean("paused")&&WatchModel.remaining(t)>0?"pause":"play",327,y+row*.75f,Math.min(32,row*.42f),()->change(s->WatchModel.toggle(s,id)),false);hits.add(new Hit(new RectF(258,y+row/2,396,y+row),()->change(s->WatchModel.toggle(s,id)),null));
+    icon("next",327,y+row*.25f,Math.min(32,row*.42f),()->requestMove(id),false);hits.add(new Hit(new RectF(258,y,396,y+row/2),()->requestMove(id),null));line(258,y,258,y+row);line(258,y+row/2,396,y+row/2);line(0,y+row,396,y+row);y=targetY+row;}
+   canvas.restore();for(int h=hits.size()-1;h>=rowHitStart;h--){if(!hits.get(h).rect.intersect(0,HOME_LIST_TOP,396,HOME_LIST_BOTTOM))hits.remove(h);}if(!status.equals("共有中"))center(status,198,136,8,DIM,false);
+  }
+  void tableLabel(String id,float x,boolean current){String label=WatchModel.fullTableName(state(),id);float font=22;p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(font);while(font>12&&p.measureText(label)>120){font--;p.setTextSize(font);}if(p.measureText(label)>120)label=fit(label,112,font)+"…";if(current){p.setColor(YELLOW);canvas.drawRect(x-64,99,x+64,128,p);}center(label,x,120,font,current?BG:WHITE,true);}
+  void controlGlyph(String type,float x,float y){p.setColor(WHITE);p.setStrokeWidth(2.7f);p.setStyle(Paint.Style.STROKE);if(type.equals("reset")){canvas.drawArc(x-10,y-10,x+10,y+10,-110,290,false,p);canvas.drawLine(x-10,y,x-15,y+5,p);canvas.drawLine(x-10,y,x-5,y+5,p);}else if(type.equals("pause")){p.setStrokeWidth(4);canvas.drawLine(x-5,y-10,x-5,y+10,p);canvas.drawLine(x+5,y-10,x+5,y+10,p);}else{p.setStyle(Paint.Style.FILL);Path triangle=new Path();triangle.moveTo(x-7,y-11);triangle.lineTo(x+11,y);triangle.lineTo(x-7,y+11);triangle.close();canvas.drawPath(triangle,p);}p.setStyle(Paint.Style.FILL);p.setStrokeWidth(1);}
+  void detail(){JSONObject cast=WatchModel.cast(state(),selected);if(cast==null){selected=null;home();return;}String id=selected;JSONObject t=WatchModel.timer(state(),id);icon("history",103,56,21,()->show("history"));center(fit(cast.optString("name"),110,20),198,62,20,WHITE,true);center("現在",107,94,10,DIM,false);center("次の卓",289,94,10,DIM,false);tableLabel(cast.optString("currentTableId"),107,true);center("→",198,119,24,Color.CYAN,false);tableLabel(cast.optString("destinationTableId"),289,false);hits.add(new Hit(new RectF(43,97,171,131),()->editRoute(id,null),null));hits.add(new Hit(new RectF(225,97,353,131),()->editRoute(id,null),null));line(45,136,351,136);
+   button("−10秒",45,143,47,29,()->change(s->WatchModel.adjust(s,id,-10000)));button("−1分",45,178,47,29,()->change(s->WatchModel.adjust(s,id,-60000)));button("＋10秒",304,143,47,29,()->change(s->WatchModel.adjust(s,id,10000)));button("＋1分",304,178,47,29,()->change(s->WatchModel.adjust(s,id,60000)));
+   center(t==null?"—:—":clock(WatchModel.remaining(t)),198,181,43,timerColor(t),true);if(t!=null&&t.optBoolean("paused"))center("一時停止中",198,203,11,Color.rgb(255,74,88),true);else if(t!=null&&WatchModel.remaining(t)==0)center("時間です",198,203,12,Color.RED,true);
+   button("",45,216,148,35,()->change(s->{JSONObject tt=WatchModel.timer(s,id);if(tt!=null)WatchModel.selectTime(s,id,tt.optLong("durationMs",300000),false);}));controlGlyph("reset",119,233.5f);button("",199,216,152,35,()->change(s->WatchModel.toggle(s,id)));controlGlyph(t!=null&&!t.optBoolean("paused")&&WatchModel.remaining(t)>0?"pause":"play",275,233.5f);
+   float w=306f/(choices.size()+1);for(int i=0;i<choices.size();i++){int seconds=choices.get(i);button(seconds%60==0?seconds/60+"分":clock(seconds*1000L),45+i*w,262,w-4,34,WHITE,false,()->change(s->WatchModel.selectTime(s,id,seconds*1000L,true)),()->{choices.remove(Integer.valueOf(seconds));prefs.edit().putString("choices",new JSONArray(choices).toString()).apply();invalidate();});}button("＋",45+choices.size()*w,262,w-4,34,()->timePicker());button("入力",65,308,131,34,()->openMetrics(id));boolean canUndo=cast.optJSONArray("undoStack")!=null&&cast.optJSONArray("undoStack").length()>0;button("⟲ 戻す",202,308,129,34,canUndo?WHITE:DIM,false,()->{if(canUndo)confirm("直前の卓移動を戻しますか？",()->change(s->WatchModel.undo(s,id)));},null);boolean canMove=cast.optJSONArray("nominatedTableIds")!=null&&cast.optJSONArray("nominatedTableIds").length()>1&&!cast.optString("destinationTableId").equals(cast.optString("currentTableId"))&&!cast.optString("destinationTableId").equals("null")&&!cast.optString("destinationTableId").isEmpty();p.setColor(canMove?Color.rgb(30,91,145):Color.rgb(24,47,70));canvas.drawRect(0,348,396,396,p);center("次の卓へ",198,373,18,canMove?WHITE:DIM,true);if(canMove)hits.add(new Hit(new RectF(0,348,396,396),()->requestMove(id),null));
+  }
+  void timerNotice(){
+   if(currentNotice==null)return;p.setColor(Color.BLACK);canvas.drawRect(0,0,396,396,p);
+   p.setColor(Color.rgb(81,120,158));canvas.drawCircle(198,48,21,p);p.setColor(WHITE);p.setStrokeWidth(2);p.setStyle(Paint.Style.STROKE);canvas.drawCircle(198,48,11,p);canvas.drawLine(198,40,198,48,p);canvas.drawLine(198,48,204,52,p);p.setStyle(Paint.Style.FILL);
+   center(fit(currentNotice.optString("name"),280,28),198,105,28,WHITE,true);
+   int advance=currentNotice.optInt("advance");center(currentNotice.optBoolean("test")?"通知テスト":advance>0?"終了"+advance+"秒前":"時間です",198,134,15,DIM,false);
+   center(new java.text.SimpleDateFormat("HH:mm",Locale.JAPAN).format(new Date()),198,156,14,DIM,false);
+   center(fit(currentNotice.optString("fromTableName","未設定"),310,29),198,213,29,WHITE,true);
+   center("↓",198,250,28,WHITE,true);String to=currentNotice.optString("toTableName","未設定");center(fit(to.equals("未設定")?"次の卓は未設定":to,310,29),198,289,29,WHITE,true);
+   
+  }
+  void overlay(){hits.clear();p.setColor(BG);canvas.drawRect(0,0,396,396,p);if(popup.equals("timerNotice")){timerNotice();return;}String title=popup.equals("moveConfirm")?"卓移動の確認":popup.equals("metrics")?"実績入力":popup.equals("time")?"時間を設定":popup.equals("route")?"推移卓を設定":popup.equals("members")?"メンバー追加":popup.equals("history")?"移動・タイマー履歴":popup.equals("alerts")?"通知・振動":popup.equals("floors")?"フロア・卓":"設定";center(title,198,79,17,WHITE,true);
+   if(popup.equals("time")){center("分",163,118,12,DIM,false);center("秒",301,118,12,DIM,false);for(int col=0;col<2;col++){int value=col==0?dialMinute:dialSecond;float x=62+col*142;p.setColor(Color.rgb(30,67,70));canvas.drawRect(x,153,x+130,200,p);center(String.format(Locale.JAPAN,"%02d",value),x+65,184,30,WHITE,true);center(String.format(Locale.JAPAN,"%02d",col==0?Math.max(0,value-1):(value+50)%60),x+65,141,22,DIM,false);center(String.format(Locale.JAPAN,"%02d",col==0?Math.min(240,value+1):(value+10)%60),x+65,228,22,DIM,false);final int wheel=col;hits.add(new Hit(new RectF(x,118,x+130,152),()->dial(wheel,-1),null));hits.add(new Hit(new RectF(x,200,x+130,244),()->dial(wheel,1),null));}center(dialMinute+"分"+dialSecond+"秒",198,257,14,WHITE,true);button("候補に追加",55,282,139,38,()->{int seconds=Math.min(14400,dialMinute*60+dialSecond);if(seconds==0)return;if(!choices.contains(seconds)&&choices.size()<4)choices.add(seconds);Collections.sort(choices);prefs.edit().putString("choices",new JSONArray(choices).toString()).apply();popup="";invalidate();});button("時間をセット",202,282,139,38,()->{int seconds=Math.min(14400,dialMinute*60+dialSecond);if(seconds==0)return;String id=selected;change(s->WatchModel.selectTime(s,id,seconds*1000L,true));popup="";invalidate();});return;}
+   if(popup.equals("moveConfirm")){JSONObject cast=WatchModel.cast(state(),moveCast);center(cast==null?"":cast.optString("name"),198,127,24,WHITE,true);center(fit(WatchModel.fullTableName(state(),moveFrom),280,22),198,170,22,WHITE,true);center("↓",198,204,23,DIM,true);center(fit(WatchModel.fullTableName(state(),moveTo),280,22),198,240,22,WHITE,true);button(moveSaving?"移動中…":"移動する",70,279,256,42,()->approveMove());return;}
+   if(popup.equals("metrics")){JSONObject member=WatchMetrics.member(repo.members,metricCast);center((member==null?"":member.optString("name"))+"　"+metricDate,198,107,12,DIM,true);ArrayList<String> keys=new ArrayList<>(metricFields.keySet());scroll=Math.min(scroll,Math.max(0,keys.size()-2));for(int i=scroll;i<Math.min(keys.size(),scroll+2);i++){String field=keys.get(i);float y=121+(i-scroll)*73;center(fit(metricFields.get(field),280,14),198,y+13,14,WHITE,true);button("−",61,y+22,54,37,()->{if(!metricsSaving){metricDraft.put(field,Math.max(0,metricDraft.get(field)-1));invalidate();}});center(WatchMetrics.number(metricDraft.get(field)),198,y+51,27,WHITE,true);button("＋",281,y+22,54,37,()->{if(!metricsSaving){metricDraft.put(field,metricDraft.get(field)+1);invalidate();}});}button(metricsSaving?"保存中…":"保存",70,287,256,36,()->saveMetrics());return;}
+   if(popup.equals("settings")){button("フロア・卓",55,106,286,44,()->show("floors"));button("通知・振動",55,162,286,44,()->show("alerts"));center("毎朝6時にメンバーを切り替えます",198,252,12,DIM,false);center("履歴はFirebaseに保存されます",198,275,12,DIM,false);return;}
+   if(popup.equals("alerts")){JSONObject alerts=alertSettings();button("終了時　"+(alerts.optBoolean("endEnabled",true)?"ON":"OFF"),55,98,139,32,()->{try{alerts.put("endEnabled",!alerts.optBoolean("endEnabled",true));saveAlerts(alerts);}catch(Exception ignored){}});button("振動　"+(alerts.optBoolean("vibration",true)?"ON":"OFF"),202,98,139,32,()->{try{alerts.put("vibration",!alerts.optBoolean("vibration",true));saveAlerts(alerts);}catch(Exception ignored){}});center("終了前のお知らせ（複数選択）",198,153,12,DIM,false);int[] seconds={10,20,30,60,120,180};JSONArray saved=alerts.optJSONArray("advanceSecondsList");for(int i=0;i<6;i++){int v=seconds[i];boolean found=false;if(saved!=null)for(int j=0;j<saved.length();j++)if(saved.optInt(j)==v)found=true;boolean chosen=found;button(v<60?v+"秒前":v/60+"分前",55+(i%3)*97,164+(i/3)*40,91,34,WHITE,chosen,()->{try{JSONArray next=new JSONArray();if(saved!=null)for(int j=0;j<saved.length();j++)if(saved.optInt(j)!=v)next.put(saved.optInt(j));if(!chosen)next.put(v);alerts.put("advanceSecondsList",next);saveAlerts(alerts);}catch(Exception ignored){}},null);}button("通知の許可を設定",70,258,256,32,()->{if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=0)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},20);if(Build.VERSION.SDK_INT>=31){try{startActivity(new android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,android.net.Uri.parse("package:"+getPackageName())));}catch(Exception e){notifyText("時計の設定からアラームを許可してください");}}});button("通知をテスト",70,298,256,32,()->{alarms.testNotification(alertSettings().optBoolean("vibration",true));notifyText("5秒後に通知します（振動"+(alertSettings().optBoolean("vibration",true)?"ON":"OFF")+"）");});return;}
+   if(popup.equals("members")){icon(today?"本日✓":"本日",285,75,17,()->{today=!today;scroll=0;memberOffset=0;invalidate();});JSONArray all=repo.members.optJSONArray("members");ArrayList<JSONObject> members=new ArrayList<>();if(all!=null)for(int i=0;i<all.length();i++){JSONObject m=all.optJSONObject(i);boolean include=true;if(today){JSONObject metrics=m.optJSONObject("dailyMetrics");JSONObject daily=metrics==null?null:metrics.optJSONObject(WatchModel.day());JSONObject memos=m.optJSONObject("dayMemos");include=(daily!=null&&daily.length()>0)||(memos!=null&&!memos.optString(WatchModel.day()).trim().isEmpty());}if(include)members.add(m);}members.sort((a,b)->java.text.Collator.getInstance(Locale.JAPAN).compare(a.optString("name"),b.optString("name")));maxMemberOffset=Math.max(0,members.size()*48-297+78);memberOffset=Math.max(0,Math.min(memberOffset,maxMemberOffset));int firstMember=(int)(memberOffset/48);int memberHitStart=hits.size();canvas.save();canvas.clipRect(0,99,396,396);for(int i=firstMember;i<members.size()&&99+i*48-memberOffset<396;i++){JSONObject member=members.get(i);String id=member.optString("id");boolean added=WatchModel.cast(state(),id)!=null;float y=99+i*48-memberOffset;text(fit(member.optString("name"),165,18),48,y+27,18,WHITE,true);button(added?"削除":"追加",276,y+3,65,38,()->{if(added)confirm("一覧から削除しますか？",()->change(s->WatchModel.remove(s,id)));else editRoute(id,member);});line(45,y+46,351,y+46);}canvas.restore();for(int h=hits.size()-1;h>=memberHitStart;h--){if(!hits.get(h).rect.intersect(0,99,396,396))hits.remove(h);}if(members.isEmpty())center("該当するメンバーがいません",198,214,13,DIM,false);return;}
+   if(popup.equals("route")){ArrayList<JSONObject> tables=new ArrayList<>();JSONArray floors=state().optJSONArray("floors");if(floors!=null)for(int i=0;i<floors.length();i++){JSONObject f=floors.optJSONObject(i);JSONArray ta=f.optJSONArray("tables");if(ta!=null)for(int j=0;j<ta.length();j++)try{JSONObject item=new JSONObject(ta.getJSONObject(j).toString());item.put("floor",f.optString("name"));tables.add(item);}catch(Exception ignored){}}center("押した順に番号が付きます",198,101,11,DIM,false);int start=scroll*3;scroll=Math.min(scroll,Math.max(0,(tables.size()+2)/3-4));start=scroll*3;for(int i=start;i<Math.min(tables.size(),start+12);i++){JSONObject table=tables.get(i);String id=table.optString("id");int index=route.indexOf(id),cell=i-start;float x=51+(cell%3)*100,y=111+(cell/3)*39;button((index<0?"＋":String.valueOf(index+1))+" "+fit(table.optString("name"),54,13),x,y,94,34,WHITE,index>=0,()->{if(route.contains(id))route.remove(id);else route.add(id);invalidate();},null);text(table.optString("floor"),x+3,y+10,7,DIM,false);}button(adding==null?"推移を保存":"この推移で追加",70,289,256,36,()->saveRoute());return;}
+   if(popup.equals("history")){JSONObject cast=WatchModel.cast(state(),selected);if(cast==null)return;ArrayList<JSONObject> logs=new ArrayList<>();for(String key:new String[]{"history","timerHistory"}){JSONArray list=cast.optJSONArray(key);if(list!=null)for(int i=0;i<list.length();i++)logs.add(list.optJSONObject(i));}logs.sort((a,b)->Long.compare(b.optLong("at"),a.optLong("at")));scroll=Math.min(scroll,Math.max(0,logs.size()-4));for(int i=scroll;i<Math.min(logs.size(),scroll+4);i++){JSONObject log=logs.get(i);float y=104+(i-scroll)*51;text(stamp(log.optLong("at")),55,y+12,11,DIM,false);String label=log.has("durationMs")?log.optString("tableName")+"  "+clock(log.optLong("durationMs")):log.optString("fromTableName","")+" → "+log.optString("toTableName",log.optString("tableName"));text(fit(label,280,14),55,y+33,14,WHITE,true);line(55,y+44,341,y+44);}return;}
+   if(popup.equals("floors")){JSONArray floors=state().optJSONArray("floors");JSONObject floor=null;if(floors!=null)for(int i=0;i<floors.length();i++)if(floors.optJSONObject(i).optString("id").equals(floorId))floor=floors.optJSONObject(i);if(floor==null){if(floors!=null){scroll=Math.min(scroll,Math.max(0,floors.length()-3));for(int i=scroll;i<Math.min(floors.length(),scroll+3);i++){JSONObject f=floors.optJSONObject(i);String fid=f.optString("id");button(f.optString("name")+"　＋",55,103+(i-scroll)*47,286,40,WHITE,false,()->{floorId=fid;scroll=0;invalidate();},()->floorMenu(fid,f.optString("name")));}}button("＋ フロアを追加",70,278,256,36,()->input("フロア名","",v->change(s->WatchRepository.array(s,"floors").put(new JSONObject().put("id",id()).put("name",v).put("tables",new JSONArray())))));}else{JSONObject f=floor;String fid=f.optString("id");button("‹ "+f.optString("name"),55,98,286,29,WHITE,false,()->{floorId=null;scroll=0;invalidate();},()->floorMenu(fid,f.optString("name")));JSONArray tables=f.optJSONArray("tables");if(tables!=null){scroll=Math.min(scroll,Math.max(0,tables.length()-3));for(int i=scroll;i<Math.min(tables.length(),scroll+3);i++){JSONObject table=tables.optJSONObject(i);String tid=table.optString("id");button(table.optString("name"),55,135+(i-scroll)*40,286,34,WHITE,false,()->input("卓名",table.optString("name"),v->change(s->{JSONObject target=findTable(s,tid);if(target!=null)target.put("name",v);})),()->confirm("卓を削除しますか？",()->change(s->deleteTable(s,tid))));}}button("＋ 卓を追加",70,278,256,36,()->input("卓名","",v->change(s->{JSONObject target=findFloor(s,fid);if(target!=null)WatchRepository.array(target,"tables").put(new JSONObject().put("id",id()).put("name",v));})));}return;}
+  }
+  void settleBack(boolean dismiss){
+   if(edgeSettling)return;
+   if((metricsSaving&&popup.equals("metrics"))||(moveSaving&&popup.equals("moveConfirm")))dismiss=false;
+   final boolean complete=dismiss;edgeSettling=true;edgeSwiping=true;pressed=null;handler.removeCallbacks(longPress);
+   android.animation.ValueAnimator animation=android.animation.ValueAnimator.ofFloat(edgeDx,complete?396f:0f);
+   animation.setDuration(complete?Math.max(100,(int)(220*(396-edgeDx)/396)):150);
+   animation.setInterpolator(new android.view.animation.DecelerateInterpolator());
+   animation.addUpdateListener(value->{edgeDx=(float)value.getAnimatedValue();invalidate();});
+   animation.addListener(new android.animation.AnimatorListenerAdapter(){@Override public void onAnimationEnd(android.animation.Animator value){if(complete)finishBack();edgeDx=0;edgeSwiping=false;edgeSettling=false;invalidate();}});
+   animation.start();
+  }
+  @Override public boolean onTouchEvent(android.view.MotionEvent e){float x=(e.getX()-ox)/scale,y=(e.getY()-oy)/scale;if(edgeSettling)return true;if(e.getAction()==0){downY=y;downX=x;lastTouchY=y;edgeDx=0;edgeSwiping=false;edgeCandidate=x<=46&&(!popup.isEmpty()||selected!=null)&&!((metricsSaving&&popup.equals("metrics"))||(moveSaving&&popup.equals("moveConfirm")));getParent().requestDisallowInterceptTouchEvent(edgeCandidate);android.util.Log.d("DareGesture","down x="+x+" y="+y+" modal="+popup+" edge="+edgeCandidate);moved=false;held=false;pressed=null;for(int i=hits.size()-1;i>=0;i--)if(hits.get(i).rect.contains(x,y)){pressed=hits.get(i);break;}handler.postDelayed(longPress,600);return true;}if(e.getAction()==2){if(edgeCandidate&&x-downX>10&&(edgeSwiping||x-downX>Math.abs(y-downY)*1.25f)){edgeSwiping=true;edgeDx=Math.max(0,x-downX);moved=true;pressed=null;handler.removeCallbacks(longPress);invalidate();return true;}if(Math.abs(y-downY)>8){moved=true;handler.removeCallbacks(longPress);}if(moved&&selected==null&&popup.isEmpty()&&downY>=HOME_LIST_TOP&&downY<=HOME_LIST_BOTTOM){homeOffset=Math.max(0,Math.min(maxHomeOffset,homeOffset+lastTouchY-y));positions.clear();invalidate();}else if(moved&&popup.equals("members")&&downY>=99&&downY<=396){memberOffset=Math.max(0,Math.min(maxMemberOffset,memberOffset+lastTouchY-y));invalidate();}lastTouchY=y;return true;}if(e.getAction()==1){getParent().requestDisallowInterceptTouchEvent(false);handler.removeCallbacks(longPress);if(edgeSwiping){boolean dismiss=x-downX>=90;android.util.Log.d("DareGesture","edge back="+dismiss+" distance="+(x-downX));edgeCandidate=false;pressed=null;settleBack(dismiss);return true;}if(moved){if(popup.equals("members")&&downY>=99&&downY<=396){invalidate();}else if(selected==null&&popup.isEmpty()&&downY>=HOME_LIST_TOP&&downY<=HOME_LIST_BOTTOM){invalidate();}else if(popup.equals("time")&&downY>118&&downY<244){int wheel=downX<198?0:1;int steps=Math.max(1,Math.round(Math.abs(y-downY)/32));for(int i=0;i<steps;i++)dial(wheel,y<downY?1:-1);}else scroll=Math.max(0,scroll+(y<downY?1:-1));invalidate();}else if(!held&&pressed!=null&&pressed.rect.contains(x,y)){pressed.click.run();invalidate();}pressed=null;return true;}if(e.getAction()==3){getParent().requestDisallowInterceptTouchEvent(false);handler.removeCallbacks(longPress);pressed=null;edgeSwiping=false;edgeCandidate=false;edgeDx=0;invalidate();}return true;}
+ }
+ private JSONObject findFloor(JSONObject s,String id){JSONArray a=s.optJSONArray("floors");if(a!=null)for(int i=0;i<a.length();i++)if(id.equals(a.optJSONObject(i).optString("id")))return a.optJSONObject(i);return null;}
+ private JSONObject findTable(JSONObject s,String id){JSONArray a=s.optJSONArray("floors");if(a!=null)for(int i=0;i<a.length();i++){JSONArray t=a.optJSONObject(i).optJSONArray("tables");if(t!=null)for(int j=0;j<t.length();j++)if(id.equals(t.optJSONObject(j).optString("id")))return t.optJSONObject(j);}return null;}
+ private void deleteTable(JSONObject s,String id)throws Exception{JSONArray floors=WatchRepository.array(s,"floors");for(int i=0;i<floors.length();i++){JSONArray tables=WatchRepository.array(floors.getJSONObject(i),"tables");for(int j=tables.length()-1;j>=0;j--)if(id.equals(tables.getJSONObject(j).optString("id")))tables.remove(j);}JSONArray casts=WatchRepository.array(s,"casts");for(int i=0;i<casts.length();i++){JSONObject c=casts.getJSONObject(i);JSONArray route=WatchRepository.array(c,"nominatedTableIds");for(int j=route.length()-1;j>=0;j--)if(id.equals(route.optString(j)))route.remove(j);if(id.equals(c.optString("currentTableId")))c.put("currentTableId",route.length()>0?route.get(0):JSONObject.NULL);String current=c.optString("currentTableId");Object next=JSONObject.NULL;for(int j=0;j<route.length();j++)if(!current.equals(route.optString(j))){next=route.get(j);break;}c.put("nextTableId",next).put("destinationTableId",next);if(id.equals(WatchModel.timer(s,c.optString("id"))==null?"":WatchModel.timer(s,c.optString("id")).optString("tableId")))WatchRepository.object(s,"timers").remove(c.optString("id"));}}
+ private void floorMenu(String fid,String name){new AlertDialog.Builder(this).setItems(new String[]{"フロア名を変更","フロアを削除"},(d,n)->{if(n==0)input("フロア名",name,v->change(s->{JSONObject f=findFloor(s,fid);if(f!=null)f.put("name",v);}));else confirm("フロアと卓を削除しますか？",()->change(s->{JSONObject f=findFloor(s,fid);if(f!=null){JSONArray ta=f.optJSONArray("tables");ArrayList<String> ids=new ArrayList<>();if(ta!=null)for(int i=0;i<ta.length();i++)ids.add(ta.optJSONObject(i).optString("id"));for(String tid:ids)deleteTable(s,tid);}JSONArray a=WatchRepository.array(s,"floors");for(int i=a.length()-1;i>=0;i--)if(fid.equals(a.optJSONObject(i).optString("id")))a.remove(i);floorId=null;}));}).show();}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

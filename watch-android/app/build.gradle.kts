@@ -10,8 +10,8 @@ android {
         applicationId = "jp.dare.watch"
         minSdk = 30
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 24
+        versionName = "2.19"
     }
 
     buildTypes {
@@ -25,3 +25,22 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

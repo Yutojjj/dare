@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090b0f">
+  <meta name="color-scheme" content="dark">
+  <title>付け回し</title>
+  <link rel="stylesheet" href="./watch.css">
+  <link rel="stylesheet" href="./phone.css">
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="watch-stage">
+    <div class="watch-face" id="watchFace">
+      <header class="watch-header">
+        <button class="history-open-button header-icon-button" id="openHistoryDialog" type="button" aria-label="移動履歴を開く" title="移動履歴" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11a8.5 8.5 0 1 1 2.4 6"/><path d="M3.5 4.5V11h6.2"/><path d="M12 7v5l3.2 2"/></svg>
+        </button>
+        <span class="watch-title" id="watchTitle">付け回し</span>
+        <button class="back-button header-icon-button" id="backButton" type="button" aria-label="一覧に戻る" title="一覧に戻る" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="home-toolbar">
+      <time class="home-clock" id="homeClock" aria-label="現在時刻"></time>
+      <div class="home-tool-buttons">
+      <button class="header-icon-button home-search-button" id="homeSearchButton" type="button" aria-label="メンバーを検索" title="検索" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+      </button>
+      <button class="header-icon-button home-size-button" id="homeSizeButton" type="button" aria-label="表示サイズを変更（現在 小）" title="表示サイズ">
+        小
+      </button>
+      <button class="header-icon-button home-filter-button" id="homeFilterButton" type="button" aria-label="表示順を選ぶ" title="表示順" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 11h6M4 16h3M17 4v15m-4-4 4 4 4-4"/></svg>
+      </button>
+      <button class="manage-open-button header-icon-button home-settings-button" id="manageButton" type="button" aria-label="フロア・卓設定" title="フロア・卓設定">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 2.5h3l.6 2.2c.6.2 1.1.4 1.6.7l2-1.1 2.1 2.1-1.1 2c.3.5.6 1 .7 1.6l2.2.6v3l-2.2.6c-.2.6-.4 1.1-.7 1.6l1.1 2-2.1 2.1-2-1.1c-.5.3-1 .6-1.6.7l-.6 2.2h-3l-.6-2.2c-.6-.2-1.1-.4-1.6-.7l-2 1.1-2.1-2.1 1.1-2c-.3-.5-.6-1-.7-1.6l-2.2-.6v-3l2.2-.6c.2-.6.4-1.1.7-1.6l-1.1-2 2.1-2.1 2 1.1c.5-.3 1-.6 1.6-.7Z"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </button>
+      </div>
+      </div>
+
+      <main class="watch-content" id="homeScreen">
+        <div class="cast-list" id="castList" aria-label="複数卓で本指名中のキャスト"></div>
+        <button class="add-member-home-button" id="openMemberAddButton" type="button">＋ メンバーを追加</button>
+      </main>
+
+      <main class="watch-content detail-screen" id="detailScreen" hidden>
+        <div class="current-table-card">
+          <div class="route-endpoint"><span>現在</span><strong id="currentTable">—卓</strong></div>
+          <span class="route-arrow" aria-hidden="true">→</span>
+          <div class="route-endpoint route-destination">
+            <span>次の卓</span>
+            <button class="route-destination-button" id="nextTableLabel" type="button" aria-haspopup="dialog" aria-controls="routeEditorDialog">—卓</button>
+          </div>
+        </div>
+
+        <section class="timer-section" aria-label="タイマー">
+          <div class="timer-top-group">
+            <div class="timer-display-row">
+              <output class="timer-display" id="timerDisplay" aria-live="polite">—:—</output>
+              <div class="timer-adjust-actions timer-adjust-actions-left" id="timerSubtractActions" hidden>
+                <button id="subtractTenSeconds" type="button">−10秒</button>
+                <button id="subtractOneMinute" type="button">−1分</button>
+              </div>
+              <div class="timer-adjust-actions" id="timerAdjustActions" hidden>
+                <button id="addTenSeconds" type="button">＋10秒</button>
+                <button id="addOneMinute" type="button">＋1分</button>
+              </div>
+            </div>
+            <p class="timer-notice" id="timerNotice" role="status" hidden>時間です</p>
+          </div>
+          <div class="timer-controls" id="timerControls" hidden>
+            <button id="resetTimerButton" type="button" aria-label="リセット" title="リセット">↻</button>
+            <button id="pauseTimerButton" type="button" aria-label="一時停止" title="一時停止">Ⅱ</button>
+          </div>
+          <div class="timer-presets" id="timerPresets"></div>
+          <div class="detail-actions" id="detailActions">
+            <button class="next-table-action" id="nextTableAction" type="button" disabled>次の卓へ</button>
+            <button class="undo-action" id="performanceInputButton" type="button">入力</button>
+          </div>
+        </section>
+      </main>
+      <div class="timer-dialog-backdrop route-editor-backdrop" id="routeEditorDialog" hidden>
+        <section class="timer-dialog route-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="routeEditorTitle">
+          <header class="timer-dialog-header">
+            <h2 id="routeEditorTitle">推移卓を設定</h2>
+            <button class="timer-dialog-close" id="closeRouteEditor" type="button" aria-label="閉じる">×</button>
+          </header>
+          <p class="route-editor-hint" id="routeEditorHint">卓を押した順に番号が付き、その順で推移します。もう一度押すと解除されます。</p>
+          <div class="route-editor-choices" id="routeEditorChoices" aria-label="選択できる卓"></div>
+          <div class="timer-dialog-actions">
+            <button id="cancelRouteEditor" type="button">キャンセル</button>
+            <button id="saveRouteEditor" type="button">保存</button>
+          </div>
+        </section>
+      </div>
+      <main class="watch-content manage-screen" id="manageScreen" hidden>
+        <div class="settings-tabs" role="tablist" aria-label="設定">
+          <button id="floorSettingsTab" role="tab" aria-selected="true" aria-controls="floorSettingsPanel" type="button">フロア・卓</button>
+          <button id="alertSettingsTab" role="tab" aria-selected="false" aria-controls="alertSettingsPanel" type="button">通知・振動</button>
+          <button id="dayRolloverTab" role="tab" aria-selected="false" aria-controls="dayRolloverPanel" type="button">日次更新</button>
+        </div>
+        <section id="floorSettingsPanel" role="tabpanel" aria-labelledby="floorSettingsTab">
+        <div class="floor-list" id="floorList"></div>
+        <button class="add-floor-button" id="addFloorButton" type="button">＋ フロアを追加</button>
+        </section>
+        <section id="dayRolloverPanel" role="tabpanel" aria-labelledby="dayRolloverTab" hidden>
+          <label class="alert-setting-row" for="dayRolloverTime"><span>メンバー更新時刻</span><input id="dayRolloverTime" type="time" value="06:00"></label>
+          <p class="alert-settings-note">指定時刻に一覧を当日のカレンダー登録メンバーへ更新します。設定済みの推移卓は引き継ぎます。</p>
+        </section>
+        <section id="alertSettingsPanel" role="tabpanel" aria-labelledby="alertSettingsTab" hidden>
+          <p class="alert-settings-heading">終了前のお知らせ</p>
+          <div class="advance-alert-options" id="advanceAlertOptions" role="group" aria-label="終了前のお知らせ（複数選択）"></div>
+          <p class="alert-settings-note">複数選択できます。すべて解除すると通知しません。</p>
+          <label class="alert-setting-row"><span>終了時のお知らせ</span><input id="endAlertEnabled" type="checkbox"></label>
+          <label class="alert-setting-row"><span>振動</span><input id="alertVibrationEnabled" type="checkbox"></label>
+          <p class="alert-settings-note">この端末に自動保存されます。</p>
+          <p class="alert-settings-note" id="alertPlatformNote"></p>
+        </section>
+      </main>
+      <div class="timer-dialog-backdrop member-picker-backdrop" id="memberPickerDialog" hidden>
+        <section class="timer-dialog member-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="memberPickerTitle">
+          <header class="timer-dialog-header">
+            <h2 id="memberPickerTitle">メンバー追加</h2>
+            <button class="member-day-filter-toggle" id="memberPickerDayToggle" type="button" aria-pressed="false">本日のメンバー</button>
+            <button class="timer-dialog-close" id="closeMemberPickerDialog" type="button" aria-label="閉じる">×</button>
+          </header>
+          <p class="member-picker-status" id="memberPickerStatus" role="status"></p>
+          <div class="member-picker-list" id="memberPickerList" aria-label="アプリに登録されているキャスト"></div>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop home-control-backdrop" id="homeSearchDialog" hidden>
+        <section class="timer-dialog home-control-dialog" role="dialog" aria-modal="true" aria-labelledby="homeSearchTitle">
+          <header class="timer-dialog-header"><h2 id="homeSearchTitle">メンバーを検索</h2><button class="timer-dialog-close" id="closeHomeSearch" type="button" aria-label="閉じる">×</button></header>
+          <input id="homeSearchInput" type="search" placeholder="名前を入力" aria-label="メンバー名" autocomplete="off">
+          <button class="home-control-clear" id="clearHomeSearch" type="button">検索をクリア</button>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop" id="timerDialog" hidden>
+        <section class="timer-dialog" role="dialog" aria-modal="true" aria-labelledby="timerDialogTitle">
+          <header class="timer-dialog-header">
+            <h2 id="timerDialogTitle">タイマー設定</h2>
+            <button class="timer-dialog-close" id="closeTimerDialog" type="button" aria-label="閉じる">×</button>
+          </header>
+          <p class="timer-dialog-hint">上下に回して時間を合わせる</p>
+          <div class="time-wheel-picker">
+            <div class="time-wheel-column">
+              <div class="time-wheel" id="minuteWheel" role="listbox" tabindex="0" aria-label="分"></div>
+              <span class="wheel-unit">分</span>
+            </div>
+            <span class="wheel-colon">:</span>
+            <div class="time-wheel-column">
+              <div class="time-wheel" id="secondWheel" role="listbox" tabindex="0" aria-label="秒"></div>
+              <span class="wheel-unit">秒</span>
+            </div>
+          </div>
+          <output class="wheel-time-readout" id="wheelTimeReadout">0分00秒</output>
+          <p class="timer-config-message" id="timerConfigMessage" role="status"></p>
+          <div class="timer-dialog-actions">
+            <button id="saveTimerChoice" type="button">候補に追加</button>
+            <button id="startCustomTimer" type="button">この時間で開始</button>
+          </div>
+          <div class="timer-saved-choices" id="timerSavedChoices" aria-label="保存したタイマー候補"></div>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop history-dialog-backdrop" id="historyDialog" hidden>
+        <section class="timer-dialog history-dialog" role="dialog" aria-modal="true" aria-labelledby="historyDialogTitle">
+          <header class="timer-dialog-header">
+            <h2 id="historyDialogTitle">卓・タイマー履歴</h2>
+            <button class="timer-dialog-close" id="closeHistoryDialog" type="button" aria-label="閉じる">×</button>
+          </header>
+          <ol class="history-list" id="moveHistory"></ol>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop undo-confirm-backdrop" id="undoConfirmDialog" hidden>
+        <section class="timer-dialog undo-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="undoConfirmTitle">
+          <header class="timer-dialog-header">
+            <h2 id="undoConfirmTitle">移動を取り消しますか？</h2>
+            <button class="timer-dialog-close" id="closeUndoConfirm" type="button" aria-label="閉じる">×</button>
+          </header>
+          <p class="undo-confirm-message">直前の卓移動を取り消します。</p>
+          <div class="timer-dialog-actions">
+            <button id="cancelUndoMove" type="button">キャンセル</button>
+            <button id="confirmUndoMove" type="button">取り消し</button>
+          </div>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop member-actions-backdrop" id="memberActionsDialog" hidden>
+        <section class="timer-dialog member-actions-dialog" role="dialog" aria-modal="true" aria-labelledby="memberActionsTitle">
+          <header class="timer-dialog-header">
+            <h2 id="memberActionsTitle">メンバー</h2>
+            <button class="timer-dialog-close" id="closeMemberActions" type="button" aria-label="閉じる">×</button>
+          </header>
+          <div class="member-actions-list">
+            <button id="editMemberTables" type="button">卓を編集</button>
+            <button id="removeMemberFromWatch" type="button">メンバーを削除</button>
+          </div>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop action-confirm-backdrop" id="actionConfirmDialog" hidden>
+        <section class="timer-dialog action-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="actionConfirmTitle" aria-describedby="actionConfirmMessage">
+          <header class="timer-dialog-header">
+            <h2 id="actionConfirmTitle">削除の確認</h2>
+            <button class="timer-dialog-close" id="closeActionConfirm" type="button" aria-label="閉じる">×</button>
+          </header>
+          <p class="action-confirm-message" id="actionConfirmMessage"></p>
+          <div class="timer-dialog-actions">
+            <button id="cancelActionConfirm" type="button">キャンセル</button>
+            <button id="approveActionConfirm" type="button">削除</button>
+          </div>
+        </section>
+      </div>
+      <div class="timer-dialog-backdrop" id="performanceDialog" hidden>
+        <section class="timer-dialog performance-dialog" role="dialog" aria-modal="true" aria-labelledby="performanceTitle">
+          <header class="timer-dialog-header"><h2 id="performanceTitle">実績入力</h2><button class="timer-dialog-close" id="closePerformance" type="button" aria-label="閉じる">×</button></header>
+          <p id="performanceDate" class="performance-date"></p>
+          <div id="performanceRows" class="performance-rows"></div>
+          <p id="performanceStatus" role="status" class="performance-date"></p>
+          <div class="timer-dialog-actions"><button id="cancelPerformance" type="button">キャンセル</button><button id="savePerformance" type="button">保存</button></div>
+        </section>
+      </div>
+      <div class="watch-toast" id="watchToast" role="alert" hidden></div>
+    </div>
+  </div>
+  <script src="./watch-core.js"></script>
+  <script src="./watch-firebase.js"></script>
+  <script src="./watch-app.js"></script>
+  <script src="./phone-mode.js"></script>
+</body>
+</html>
+
+

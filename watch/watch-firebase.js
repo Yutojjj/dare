@@ -9,6 +9,32 @@
   };
   let ready = false, applyingRemote = false;
   window.WatchFirebase = {
+    async readPerformance() {
+      const snapshot = await firebase.firestore().collection('shared').doc('main').get();
+      if (!snapshot.exists || !Array.isArray(snapshot.data()?.state?.members)) throw new Error('管理アプリのデータを読み込めませんでした');
+      return snapshot.data().state;
+    },
+    async savePerformance(memberId, date, deltas) {
+      const ref = firebase.firestore().collection('shared').doc('main');
+      return firebase.firestore().runTransaction(async transaction => {
+        const snapshot = await transaction.get(ref);
+        const state = snapshot.data()?.state;
+        const member = state?.members?.find(item => String(item.id) === String(memberId));
+        if (!member) throw new Error('キャストが見つかりません');
+        const allowed = new Set(['nominations', 'freebacks', ...(state.monthlyMetricFields ?? []).map(item => item.id)]);
+        member.dailyMetrics ??= {};
+        const daily = member.dailyMetrics[date] ??= {};
+        for (const [field, delta] of Object.entries(deltas)) {
+          if (!allowed.has(field)) throw new Error('項目が変更されています。開き直してください');
+          const current = Number(daily[field] || 0);
+          const value = Math.max(0, (Number.isFinite(current) ? current : 0) + delta);
+          if (!Number.isFinite(value)) throw new Error('数値を確認してください');
+          daily[field] = String(value);
+        }
+        transaction.update(ref, { state, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        return state;
+      });
+    },
     async start(store, onRemote) {
       const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
       const ref = firebase.firestore(app).collection('shared').doc('watch');

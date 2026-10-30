@@ -199,7 +199,15 @@ function closeActionConfirmation() {
   $('actionConfirmDialog').hidden = true;
 }
 
-function openActionConfirmation(title, message, action) {
+function requestTableMove(cast) {
+  const from = cast.currentTableId, to = cast.destinationTableId;
+  openActionConfirmation('卓移動の確認', `${cast.name}：${currentTableLabel(cast)} → ${nextTableLabel(cast)}`, () => {
+    const latest = controller.getCast(cast.id);
+    if (latest?.currentTableId === from && latest?.destinationTableId === to && controller.moveToDestination(cast.id)) render();
+  }, '移動する');
+}
+function openActionConfirmation(title, message, action, label = '削除') {
+  $('approveActionConfirm').textContent = label;
   $('actionConfirmTitle').textContent = title;
   $('actionConfirmMessage').textContent = message;
   pendingActionConfirm = action;
@@ -284,7 +292,7 @@ function renderHome() {
         const cast = controller.getCast(button.dataset.castId);
         if (!cast) return;
         if (cast.destinationTableId == null || cast.destinationTableId === cast.currentTableId) openRouteEditor(cast);
-        else if (controller.moveToDestination(cast.id)) render();
+        else requestTableMove(cast);
       });
       button._timerAction = document.createElement('button');
       button._timerAction.type = 'button';
@@ -661,15 +669,9 @@ function renderDetail() {
   $('nextTableAction').disabled = cast.destinationTableId == null || cast.destinationTableId === cast.currentTableId;
   $('nextTableAction').setAttribute('aria-label', `${nextTableLabel(cast)}へ移動`);
   $('nextTableAction').onclick = () => {
-    if (controller.moveToDestination(cast.id)) render();
+    requestTableMove(cast);
   };
-  $('undoMoveButton').disabled = !cast.undoStack?.length;
-  $('undoMoveButton').onclick = () => {
-    if (!cast.undoStack?.length) return;
-    pendingUndoCastId = cast.id;
-    undoConfirmOpen = true;
-    $('undoConfirmDialog').hidden = false;
-  };
+  $('performanceInputButton').onclick = () => openPerformanceInput(cast);
   renderTimer(cast);
   renderHistory(cast);
   $('watchFace').classList.toggle('timer-alert', controller.getRemainingMs(cast.id) === 0);
@@ -694,7 +696,7 @@ function renderMemberPicker() {
   appMembers = readAppMembers();
   syncWatchCastNames();
   const list = $('memberPickerList');
-  const search = $('memberPickerSearch').value.trim().toLocaleLowerCase('ja');
+
   const date = localDateKey();
   const dayOnly = $('memberPickerDayToggle').getAttribute('aria-pressed') === 'true';
   const selectedCasts = new Map(controller.state.casts.map(cast => [String(cast.id), cast]));
@@ -704,8 +706,7 @@ function renderMemberPicker() {
     if (!candidateIds.has(id)) candidates.push({ id, name: cast.name, watchOnly: true });
   });
   const calendarIds = dayOnly ? readCalendarMemberIds(date) : null;
-  const visible = candidates.filter(member => member.name.toLocaleLowerCase('ja').includes(search)
-    && (!calendarIds || calendarIds.has(member.id)))
+  const visible = candidates.filter(member => !calendarIds || calendarIds.has(member.id))
     .sort((a, b) => a.name.localeCompare(b.name, 'ja', { sensitivity: 'base' }));
   const selectedCount = controller.state.casts.length;
   const tableCount = controller.state.floors.reduce((count, floor) => count + floor.tables.length, 0);
@@ -717,7 +718,7 @@ function renderMemberPicker() {
     const empty = document.createElement('p');
     empty.className = 'member-picker-empty';
     empty.textContent = dayOnly && !calendarIds.size ? '今日カレンダーに登録されたメンバーはいません'
-        : search ? '一致する名前がありません' : dayOnly ? '今日に該当するメンバーはいません' : 'キャストが登録されていません';
+        : dayOnly ? '今日に該当するメンバーはいません' : 'キャストが登録されていません';
     list.append(empty);
     return;
   }
@@ -1015,7 +1016,7 @@ $('manageButton').addEventListener('click', () => {
   render();
 });
 $('openMemberAddButton').addEventListener('click', () => {
-  $('memberPickerSearch').value = '';
+
   $('memberPickerDayToggle').setAttribute('aria-pressed', 'false');
   $('memberPickerDialog').hidden = false;
   renderMemberPicker();
@@ -1025,7 +1026,7 @@ $('cancelRouteEditor').addEventListener('click', closeRouteEditor);
 $('saveRouteEditor').addEventListener('click', saveRouteEditor);
 $('routeEditorDialog').addEventListener('click', event => { if (event.target === $('routeEditorDialog')) closeRouteEditor(); });
 $('closeMemberPickerDialog').addEventListener('click', () => { $('memberPickerDialog').hidden = true; });
-$('memberPickerSearch').addEventListener('input', renderMemberPicker);
+
 $('memberPickerDayToggle').addEventListener('click', () => {
   const button = $('memberPickerDayToggle');
   const active = button.getAttribute('aria-pressed') !== 'true';
@@ -1155,3 +1156,64 @@ window.WatchFirebase.start(store, () => {
   console.error('Firebase共有へ接続できませんでした', error);
   startWatchScreen();
 });
+
+
+let performanceDraft = null, performanceBusy = false;
+function performanceDay() {
+  const date = new Date(), [hour, minute] = rolloverTime.split(':').map(Number);
+  if (date.getHours() * 60 + date.getMinutes() < hour * 60 + minute) date.setDate(date.getDate() - 1);
+  return localDateKey(date);
+}
+async function openPerformanceInput(cast) {
+  if (performanceBusy) return;
+  performanceBusy = true;
+  $('performanceTitle').textContent = `${cast.name} 実績入力`;
+  $('performanceDate').textContent = performanceDay();
+  $('performanceRows').replaceChildren();
+  $('performanceStatus').textContent = '読み込み中…';
+  $('savePerformance').disabled = true;
+  $('performanceDialog').hidden = false;
+  try {
+    const state = await window.WatchFirebase.readPerformance();
+    const member = state.members.find(item => String(item.id) === String(cast.id));
+    if (!member) throw new Error('管理アプリに登録されたキャストを選んでください');
+    const date = $('performanceDate').textContent;
+    const fields = [{ id: 'nominations', name: '本指名数' }, { id: 'freebacks', name: 'フリーバック数' }, ...(state.monthlyMetricFields ?? []).filter(item => /^metric_[a-z0-9-]+$/.test(item.id))];
+    const base = {}, values = {};
+    performanceDraft = { memberId: cast.id, date, fields, base, values };
+    for (const field of fields) {
+      const raw = Number(member.dailyMetrics?.[date]?.[field.id] || 0);
+      base[field.id] = values[field.id] = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      const row = document.createElement('div'); row.className = 'performance-row';
+      const label = document.createElement('strong'); label.textContent = field.name;
+      const controls = document.createElement('div'); controls.className = 'performance-stepper';
+      const output = document.createElement('output'); output.textContent = String(values[field.id]); output.setAttribute('aria-label', field.name);
+      const minus = document.createElement('button'), plus = document.createElement('button');
+      for (const [button, delta] of [[minus, -1], [plus, 1]]) {
+        button.type = 'button'; button.textContent = delta < 0 ? '−' : '＋';
+        button.setAttribute('aria-label', `${field.name}を1${delta < 0 ? '減らす' : '増やす'}`);
+        button.onclick = () => { if (performanceBusy) return; values[field.id] = Math.max(0, values[field.id] + delta); output.textContent = String(values[field.id]); };
+      }
+      controls.append(minus, output, plus); row.append(label, controls); $('performanceRows').append(row);
+    }
+    $('performanceStatus').textContent = ''; $('savePerformance').disabled = false;
+  } catch (error) { $('performanceStatus').textContent = error.message || '読み込めませんでした'; }
+  finally { performanceBusy = false; }
+}
+function closePerformance() { if (!performanceBusy) { $('performanceDialog').hidden = true; performanceDraft = null; } }
+$('closePerformance').onclick = closePerformance;
+$('cancelPerformance').onclick = closePerformance;
+$('savePerformance').onclick = async () => {
+  if (performanceBusy || !performanceDraft) return;
+  performanceBusy = true; $('savePerformance').disabled = true; $('performanceStatus').textContent = '保存中…';
+  try {
+    const draft = performanceDraft, deltas = Object.fromEntries(draft.fields.map(field => [field.id, draft.values[field.id] - draft.base[field.id]]));
+    const saved = await window.WatchFirebase.savePerformance(draft.memberId, draft.date, deltas);
+    storage?.setItem(MEMBER_DIRECTORY_KEY, JSON.stringify(saved));
+    performanceBusy = false; closePerformance();
+  } catch (error) { $('performanceStatus').textContent = error.message || '保存できませんでした'; }
+  finally { performanceBusy = false; $('savePerformance').disabled = false; }
+};
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closePerformance(); });
+
+

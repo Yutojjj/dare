@@ -22,7 +22,9 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
       </header>
+      <div class="home-toolbar">
       <time class="home-clock" id="homeClock" aria-label="現在時刻"></time>
+      <div class="home-tool-buttons">
       <button class="header-icon-button home-search-button" id="homeSearchButton" type="button" aria-label="メンバーを検索" title="検索" aria-haspopup="dialog">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
       </button>
@@ -35,6 +37,8 @@
       <button class="manage-open-button header-icon-button home-settings-button" id="manageButton" type="button" aria-label="フロア・卓設定" title="フロア・卓設定">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 2.5h3l.6 2.2c.6.2 1.1.4 1.6.7l2-1.1 2.1 2.1-1.1 2c.3.5.6 1 .7 1.6l2.2.6v3l-2.2.6c-.2.6-.4 1.1-.7 1.6l1.1 2-2.1 2.1-2-1.1c-.5.3-1 .6-1.6.7l-.6 2.2h-3l-.6-2.2c-.6-.2-1.1-.4-1.6-.7l-2 1.1-2.1-2.1 1.1-2c-.3-.5-.6-1-.7-1.6l-2.2-.6v-3l2.2-.6c.2-.6.4-1.1.7-1.6l-1.1-2 2.1-2.1 2 1.1c.5-.3 1-.6 1.6-.7Z"/><circle cx="12" cy="12" r="3.2"/></svg>
       </button>
+      </div>
+      </div>
 
       <main class="watch-content" id="homeScreen">
         <div class="cast-list" id="castList" aria-label="複数卓で本指名中のキャスト"></div>
@@ -73,7 +77,7 @@
           <div class="timer-presets" id="timerPresets"></div>
           <div class="detail-actions" id="detailActions">
             <button class="next-table-action" id="nextTableAction" type="button" disabled>次の卓へ</button>
-            <button class="undo-action" id="undoMoveButton" type="button" disabled>⟲ 取り消し</button>
+            <button class="undo-action" id="performanceInputButton" type="button">入力</button>
           </div>
         </section>
       </main>
@@ -122,8 +126,6 @@
             <button class="member-day-filter-toggle" id="memberPickerDayToggle" type="button" aria-pressed="false">本日のメンバー</button>
             <button class="timer-dialog-close" id="closeMemberPickerDialog" type="button" aria-label="閉じる">×</button>
           </header>
-          <label class="sr-only" for="memberPickerSearch">名前で検索</label>
-          <input class="member-picker-search" id="memberPickerSearch" type="search" placeholder="名前で検索" autocomplete="off">
           <p class="member-picker-status" id="memberPickerStatus" role="status"></p>
           <div class="member-picker-list" id="memberPickerList" aria-label="アプリに登録されているキャスト"></div>
         </section>
@@ -209,6 +211,15 @@
           </div>
         </section>
       </div>
+      <div class="timer-dialog-backdrop" id="performanceDialog" hidden>
+        <section class="timer-dialog performance-dialog" role="dialog" aria-modal="true" aria-labelledby="performanceTitle">
+          <header class="timer-dialog-header"><h2 id="performanceTitle">実績入力</h2><button class="timer-dialog-close" id="closePerformance" type="button" aria-label="閉じる">×</button></header>
+          <p id="performanceDate" class="performance-date"></p>
+          <div id="performanceRows" class="performance-rows"></div>
+          <p id="performanceStatus" role="status" class="performance-date"></p>
+          <div class="timer-dialog-actions"><button id="cancelPerformance" type="button">キャンセル</button><button id="savePerformance" type="button">保存</button></div>
+        </section>
+      </div>
       <div class="watch-toast" id="watchToast" role="alert" hidden></div>
     </div>
   </div>
@@ -217,3 +228,5 @@
   <script src="./watch-app.js"></script>
 </body>
 </html>
+
+
