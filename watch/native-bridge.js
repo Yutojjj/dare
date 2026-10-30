@@ -1,6 +1,7 @@
 // Loaded only by the bundled Gecko proof build. The timer alarms remain native.
 if (new URLSearchParams(location.search).get('native') === 'gecko') {
   document.body.classList.add('native-web');
+  document.getElementById('watchFace').append(document.getElementById('openMemberAddButton'));
   let pending;
   let task;
   window.DareWatchNative = Object.freeze({

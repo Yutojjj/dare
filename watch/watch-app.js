@@ -865,6 +865,7 @@ function render() {
   $('backButton').hidden = !detailOpen && !managerOpen;
   $('openHistoryDialog').hidden = !detailOpen;
   $('manageButton').hidden = detailOpen || managerOpen;
+  $('openMemberAddButton').hidden = detailOpen || managerOpen;
   $('homeClock').hidden = detailOpen || managerOpen;
   $('homeClock').textContent = new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
   $('homeSearchButton').hidden = detailOpen || managerOpen;
