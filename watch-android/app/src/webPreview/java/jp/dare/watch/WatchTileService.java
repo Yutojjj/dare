@@ -55,8 +55,9 @@ public final class WatchTileService extends TileService {
         LayoutElementBuilders.Text.Builder countdown=textBuilder(status,14,remaining>0||timer==null?0xffffffff:0xffff5266);
         if(timer!=null&&!timer.optBoolean("paused")&&remaining>0){
             DynamicInt32 seconds=DynamicInstant.platformTimeWithSecondsPrecision().durationUntil(DynamicInstant.withSecondsPrecision(Instant.ofEpochMilli(timer.optLong("endsAt")))).toIntSeconds();
-            DynamicString value=DynamicString.onCondition(seconds.gt(0)).use(seconds.format().concat(DynamicString.constant("秒"))).elseUse("終了");
-            countdown.setText(new TypeBuilders.StringProp.Builder(status).setDynamicValue(value).build()).setLayoutConstraintsForDynamicText(new TypeBuilders.StringLayoutConstraint.Builder("残り99999秒").build());
+            DynamicString minutesSeconds=seconds.div(60).format().concat(DynamicString.constant("分")).concat(seconds.rem(60).format()).concat(DynamicString.constant("秒"));
+            DynamicString value=DynamicString.onCondition(seconds.gt(0)).use(minutesSeconds).elseUse("終了");
+            countdown.setText(new TypeBuilders.StringProp.Builder(status).setDynamicValue(value).build()).setLayoutConstraintsForDynamicText(new TypeBuilders.StringLayoutConstraint.Builder("99分59秒").build());
         }
         String route=WatchModel.name(state,cast.optString("currentTableId"))+" → "+WatchModel.name(state,cast.optString("destinationTableId"));
         LayoutElementBuilders.Column row=new LayoutElementBuilders.Column.Builder().setWidth(expand()).setModifiers(modifiers(id,true))
@@ -72,6 +73,6 @@ public final class WatchTileService extends TileService {
     }
     private static LayoutElementBuilders.Text.Builder textBuilder(String value,float size,int color){return new LayoutElementBuilders.Text.Builder().setText(value).setMaxLines(1).setFontStyle(new LayoutElementBuilders.FontStyle.Builder().setSize(sp(size)).setColor(ColorBuilders.argb(color)).build());}
     private static LayoutElementBuilders.Text text(String value,float size,int color){return textBuilder(value,size,color).build();}
-    private static String format(long ms){long s=(ms+999)/1000;return String.format(Locale.ROOT,"%d:%02d",s/60,s%60);}
+    private static String format(long ms){long s=(ms+999)/1000;return String.format(Locale.ROOT,"%d分%d秒",s/60,s%60);}
     private static <T> ListenableFuture<T> immediate(T value){return new ListenableFuture<T>(){public void addListener(Runnable r,Executor e){e.execute(r);}public boolean cancel(boolean interrupt){return false;}public boolean isCancelled(){return false;}public boolean isDone(){return true;}public T get(){return value;}public T get(long timeout,TimeUnit unit){return value;}};}
 }
