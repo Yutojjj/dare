@@ -110,7 +110,7 @@ test('watch UI buttons open a cast, move tables, start a timer, and restore stat
   assert.equal(first.$('timerDisplay').textContent, '5:10');
   first.$('pauseTimerButton').click();
   assert.equal(first.$('pauseTimerButton').attributes['aria-label'], '一時停止');
-  first.$('resetTimerButton').click();
+  first.$('pauseTimerButton').click();
   assert.equal(first.$('timerDisplay').textContent, '5:10');
   assert.equal(first.$('pauseTimerButton').attributes['aria-label'], '再開');
   first.$('pauseTimerButton').click();

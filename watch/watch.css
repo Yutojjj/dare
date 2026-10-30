@@ -138,7 +138,7 @@ button { color: inherit; font: inherit; touch-action: manipulation; border-radiu
 .timer-adjust-actions { position: absolute; top: 50%; right: 0; display: grid; gap: 4px; transform: translateY(-50%); }
 .timer-adjust-actions-left { right: auto; left: 0; }
 .timer-adjust-actions button { min-width: 50px; min-height: 31px; padding: 2px 4px; border: 1px solid #44505e; border-radius: 9px; background: transparent; color: #58d4bd; font-size: clamp(9px, 2.8cqw, 12px); font-weight: 800; white-space: nowrap; }
-.timer-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 3px; }
+.timer-controls { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 3px; }
 .timer-controls button { min-height: 31px; padding: 2px 5px; border: 1px solid #44505e; border-radius: 11px; background: transparent; color: #f2f4f8; font-size: clamp(17px, 5cqw, 23px); font-weight: 800; line-height: 1; }
 .timer-controls button:disabled { opacity: .45; }
 .timer-presets { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 4px; margin-top: 3px; }

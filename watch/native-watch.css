@@ -67,7 +67,6 @@
 .native-web .watch-header .header-icon-button { width:10cqw; height:10cqw; min-height:0; }
 .native-web .watch-header .header-icon-button svg { width:5.5cqw; height:5.5cqw; }
 .native-web .timer-controls button { padding:0; display:grid; place-items:center; line-height:1; }
-.native-web #resetTimerButton svg { width:6cqw; height:6cqw; display:block; }
 .native-web .timer-presets[data-count="1"] { grid-template-columns:repeat(1,minmax(0,1fr)); }
 .native-web .timer-presets[data-count="2"] { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .native-web .timer-presets[data-count="3"] { grid-template-columns:repeat(3,minmax(0,1fr)); }

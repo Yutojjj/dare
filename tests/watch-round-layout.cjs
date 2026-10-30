@@ -51,7 +51,13 @@ const server=http.createServer((req,res)=>{
     await page.setViewportSize({width:225,height:225});
     const presetBoxes=await page.locator('#timerPresets button').evaluateAll(items=>items.map(item=>item.getBoundingClientRect().y));
     assert.ok(Math.max(...presetBoxes)-Math.min(...presetBoxes)<1,'small watch presets must stay on one row');
-    const reset=await page.locator('#resetTimerButton svg').boundingBox(); assert.ok(reset.width<18,'reset icon must scale with the watch');
+    assert.equal(await page.locator('#resetTimerButton').count(),0);
+    const play=await page.locator('#pauseTimerButton').boundingBox(),controlRow=await page.locator('#timerControls').boundingBox();
+    assert.ok(Math.abs(play.width-controlRow.width)<1,'play/pause button must fill the entire row');
+    await page.locator('#pauseTimerButton').click();
+    assert.equal(await page.locator('#pauseTimerButton').getAttribute('aria-label'),'再開');
+    await page.locator('#pauseTimerButton').click();
+    assert.equal(await page.locator('#pauseTimerButton').getAttribute('aria-label'),'一時停止');
     await page.evaluate(()=>openRouteEditor(controller.state.casts[0]));
     assert.equal(await page.locator('.route-editor-table-grid').count(),1);
     assert.equal(await page.locator('.route-choice-floor').count(),10);

@@ -653,12 +653,6 @@ function renderTimer(cast) {
     $('watchToast').hidden = true;
     render();
   };
-  $('resetTimerButton').onclick = () => {
-    controller.resetTimer(cast.id);
-    $('watchFace').classList.remove('timer-alert');
-    $('watchToast').hidden = true;
-    render();
-  };
   $('addTenSeconds').onclick = () => addTimeToTimer(cast, 10_000);
   $('addOneMinute').onclick = () => addTimeToTimer(cast, 60_000);
   $('subtractTenSeconds').onclick = () => addTimeToTimer(cast, -10_000);
