@@ -672,6 +672,11 @@ function renderDetail() {
     requestTableMove(cast);
   };
   $('performanceInputButton').onclick = () => openPerformanceInput(cast);
+  const undo = $('undoMoveButton');
+  if (undo) {
+    undo.disabled = !cast.undoStack?.length;
+    undo.onclick = () => { pendingUndoCastId=cast.id; undoConfirmOpen=true; $('undoConfirmDialog').hidden=false; };
+  }
   renderTimer(cast);
   renderHistory(cast);
   $('watchFace').classList.toggle('timer-alert', controller.getRemainingMs(cast.id) === 0);
@@ -866,6 +871,7 @@ function render() {
   $('openHistoryDialog').hidden = !detailOpen;
   $('manageButton').hidden = detailOpen || managerOpen;
   $('openMemberAddButton').hidden = detailOpen || managerOpen;
+  $('nextTableAction').hidden = !detailOpen;
   $('homeClock').hidden = detailOpen || managerOpen;
   $('homeClock').textContent = new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
   $('homeSearchButton').hidden = detailOpen || managerOpen;

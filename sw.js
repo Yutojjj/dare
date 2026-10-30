@@ -1,4 +1,4 @@
-const CACHE_NAME = 'member-management-pwa-v70';
+const CACHE_NAME = 'member-management-pwa-v71';
 const APP_SHELL = [
   '/dare.html',
   '/watch/',
@@ -8,6 +8,7 @@ const APP_SHELL = [
   '/watch/watch-firebase.js',
   '/watch/native-watch.css',
   '/watch/native-bridge.js',
+  '/watch/watch-layout.js',
   '/watch/phone.html',
   '/watch/phone.css',
   '/watch/phone-mode.js',

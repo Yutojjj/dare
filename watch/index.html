@@ -11,7 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
+<body class="native-web">
   <div class="watch-stage">
     <div class="watch-face" id="watchFace">
       <header class="watch-header">
@@ -79,6 +79,7 @@
           <div class="detail-actions" id="detailActions">
             <button class="next-table-action" id="nextTableAction" type="button" disabled>次の卓へ</button>
             <button class="undo-action" id="performanceInputButton" type="button">入力</button>
+            <button class="undo-action" id="undoMoveButton" type="button" disabled>⟲ 戻す</button>
           </div>
         </section>
       </main>
@@ -225,6 +226,7 @@
     </div>
   </div>
   <script src="./watch-core.js"></script>
+  <script src="./watch-layout.js"></script>
   <script src="./native-bridge.js"></script>
   <script src="./watch-firebase.js"></script>
   <script src="./watch-app.js"></script>

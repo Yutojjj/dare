@@ -45,6 +45,8 @@ body { min-height: 100svh; background: #090b0f; }
 .timer-preset, .timer-presets[data-count="4"] .timer-preset, .timer-presets[data-count="5"] .timer-preset { min-height: 48px; font-size: 16px; }
 .detail-actions { width: 100%; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
 .detail-actions button { min-height: 52px; font-size: 15px; }
+.detail-actions #undoMoveButton { grid-column:2; grid-row:1; }
+.detail-actions #nextTableAction { grid-column:1/-1; grid-row:2; background:#245e91; color:#fff; }
 .move-button { min-height: 58px; margin-top: 4px; font-size: 17px; }
 .manage-screen { padding-top: 0; }
 .settings-tabs { gap: 8px; margin: 0 0 14px; }

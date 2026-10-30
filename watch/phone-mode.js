@@ -1,5 +1,5 @@
 (() => {
-  if (!location.pathname.endsWith('/phone.html') && new URLSearchParams(location.search).get('native') !== 'gecko') return;
+  if (!location.pathname.endsWith('/phone.html') && !document.body.classList.contains('native-web') && new URLSearchParams(location.search).get('native') !== 'gecko') return;
   document.body.classList.add('phone-mode');
 
   // A rightward edge swipe acts as Back on phones, while the visible controls

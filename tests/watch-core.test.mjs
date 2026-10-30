@@ -74,6 +74,17 @@ test('legacy table-number data is migrated without losing cast or timer state', 
   assert.equal(JSON.parse(storage.getItem(WATCH_STORAGE_KEY)).version, 2);
 });
 
+test('undo restores the timer snapshot shared with the native watch', () => {
+  const now=1_800_000_000_000;
+  const controller=new WatchController(createWatchStore(memoryStorage(),now));
+  controller.startTimerDuration('cast-aoi',420000,now);
+  const before=structuredClone(controller.state.timers['cast-aoi']);
+  controller.setDestination('cast-aoi','table-5');
+  controller.moveToDestination('cast-aoi',now+1000);
+  controller.undoLastMove('cast-aoi',now+2000);
+  assert.deepEqual(controller.state.timers['cast-aoi'],before);
+});
+
 test('timer stores start and end timestamps and restores remaining time after reload', () => {
   const now = 1_800_000_000_000;
   const storage = memoryStorage();

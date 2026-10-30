@@ -283,6 +283,7 @@
         ?? activeTimer?.durationMs
         ?? TIMER_PRESETS[0] * 60_000;
       const previousId = cast.currentTableId;
+      const before = { timer: activeTimer ? JSON.parse(JSON.stringify(activeTimer)) : null, nextTableId: cast.nextTableId, destinationTableId: cast.destinationTableId };
       const previous = previousId == null ? null : this.getTable(previousId);
       const destination = this.getTable(tableId);
       cast.currentTableId = tableId;
@@ -291,7 +292,7 @@
       if (cast.nextTableId === tableId) cast.nextTableId = null;
       cast.destinationTableId = cast.nextTableId;
       cast.undoStack ??= [];
-      cast.undoStack.push({ fromTableId: previousId, toTableId: tableId, at: now });
+      cast.undoStack.push({ fromTableId: previousId, toTableId: tableId, at: now, before });
       cast.history.unshift({
         fromTableId: previousId, fromTableName: previous?.name ?? '未設定',
         toTableId: tableId, toTableName: destination?.name ?? '削除済み卓',
@@ -318,6 +319,13 @@
         ? previousMove.toTableId
         : cast.nominatedTableIds.find(id => id !== cast.currentTableId) ?? null;
       cast.nextTableId = cast.destinationTableId;
+      if (previousMove.before) {
+        const before = previousMove.before;
+        if (before.timer) this.state.timers[castId] = JSON.parse(JSON.stringify(before.timer));
+        else delete this.state.timers[castId];
+        cast.nextTableId = before.nextTableId;
+        cast.destinationTableId = before.destinationTableId;
+      }
       cast.history.unshift({
         fromTableId: current?.id ?? null, fromTableName: current?.name ?? '未設定',
         toTableId: previous?.id ?? null, toTableName: previous?.name ?? '未設定',

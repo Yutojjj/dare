@@ -5,7 +5,7 @@ const fs=require('node:fs');
 function screen(z=0){return {hidden:false,style:{},z,closed:0,querySelector(){return {click:()=>{this.closed++;this.hidden=true;}};}};}
 function setup(dialogs,detail){
   const events={},back={clicked:0,click(){this.clicked++;}};
-  const document={body:{classList:{add(){}}},addEventListener:(name,fn)=>events[name]=fn,
+  const document={body:{classList:{add(){},contains:()=>true}},addEventListener:(name,fn)=>events[name]=fn,
     querySelectorAll:selector=>selector==='.timer-dialog-backdrop'?dialogs:(detail?[detail]:[]),getElementById:()=>back};
   vm.runInNewContext(fs.readFileSync('watch/phone-mode.js','utf8'),{document,location:{pathname:'/watch/index.html',search:'?native=gecko'},URLSearchParams,innerWidth:225,getComputedStyle:item=>({zIndex:String(item.z)}),setTimeout:fn=>fn()});
   return {back,swipe(end){events.touchstart({touches:[{clientX:5,clientY:100}]});events.touchmove({touches:[{clientX:end,clientY:100}],preventDefault(){}});events.touchend({changedTouches:[{clientX:end,clientY:100}],preventDefault(){}});}};
