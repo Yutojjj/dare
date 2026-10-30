@@ -34,4 +34,20 @@ class PreviewTests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError):self.post({'action':'shell'})
         self.assertEqual(self.calls,[])
 
+class DeviceSelectionTests(unittest.TestCase):
+    def test_mdns_serial_with_spaces_is_preserved(self):
+        calls=[]
+        serial='adb-watch (2)._adb-tls-connect._tcp'
+        def fake(command, **kwargs):
+            calls.append(command)
+            if command[-1]=='devices': data=f'List of devices attached\n{serial}\tdevice\n192.168.11.12:46649\tdevice\n'.encode()
+            elif command[-2:]==['getprop','ro.serialno']: data=b'ONE-WATCH\n'
+            else: data=b'frame'
+            return types.SimpleNamespace(stdout=data,stderr=b'',returncode=0)
+        module.selection_cache.clear()
+        with patch.object(module.subprocess,'run',fake):
+            self.assertEqual(module.adb('exec-out','screencap','-p'),b'frame')
+        self.assertIn(serial,calls[1])
+        self.assertIn('192.168.11.12:46649',calls[-1])
+
 if __name__=='__main__':unittest.main()

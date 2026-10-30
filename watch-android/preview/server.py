@@ -16,7 +16,8 @@ def adb(*command, device=True):
         serial = []
         if device:
             result = subprocess.run([args.adb, 'devices'], capture_output=True, timeout=10, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-            devices = [line.split()[0] for line in result.stdout.decode(errors='replace').splitlines()[1:] if line.strip().endswith('\tdevice')]
+            # mDNS serials can contain spaces, e.g. "watch (2)._adb...".
+            devices = [line.split('\t', 1)[0] for line in result.stdout.decode(errors='replace').splitlines()[1:] if line.strip().endswith('\tdevice')]
             if len(devices) > 1:
                 # A single watch may be listed by both IP and its automatic mDNS name.
                 key = tuple(devices)
@@ -73,7 +74,9 @@ class Handler(BaseHTTPRequestHandler):
             if action == 'wake': adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
             elif action == 'open':
                 adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
-                adb('shell', 'am', 'start', '-n', 'jp.dare.watch/.MainActivity')
+                web = adb('shell', 'pm', 'path', 'jp.dare.watch.webpreview').strip()
+                activity = 'jp.dare.watch.webpreview/jp.dare.watch.WebWatchActivity' if web else 'jp.dare.watch/.MainActivity'
+                adb('shell', 'am', 'start', '-n', activity)
             elif action == 'back': adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
             elif action in ['tap', 'swipe']:
                 coordinates = [str(max(0, min(10000, int(value[key])))) for key in (['x', 'y'] if action == 'tap' else ['x', 'y', 'x2', 'y2'])]

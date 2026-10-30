@@ -6,25 +6,25 @@
 .native-web .timer-dialog-actions:has([id^="cancel"]) { grid-template-columns: 1fr; }
 .native-web .watch-stage { padding:0; }
 .native-web .watch-face { width:100vw; height:100svh; aspect-ratio:auto; padding:0; border:0; border-radius:0; box-shadow:none; }
-.native-web .watch-face.home-open .home-clock { top:6%; font-size:5.5cqw; }
+.native-web .watch-face.home-open .home-clock { top:4%; font-size:5cqw; }
 .native-web .home-search-button { display:none!important; }
-.native-web .home-tool-buttons { position:absolute; top:15%; left:11%; right:11%; height:12%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.native-web .home-tool-buttons { position:absolute; top:11%; left:14%; right:14%; height:11%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
 .native-web .watch-face.home-open .home-tool-buttons button { position:static; width:100%; height:100%; min-height:0; padding:4px; margin:0; transform:none; border:0; border-right:1px solid var(--watch-line); border-radius:0!important; }
 .native-web .home-tool-buttons button:last-child { border-right:0!important; }
-.native-web .watch-face.home-open #homeScreen { position:absolute; inset:28% 0 0; display:flex; flex-direction:column; padding:0; overflow:auto; }
-.native-web .add-member-home-button { order:-1; position:sticky; top:0; bottom:auto; flex:0 0 11cqw; margin:0; z-index:2; font-size:3.5cqw; }
+.native-web .watch-face.home-open #homeScreen { position:absolute; inset:23% 0 0; display:flex; flex-direction:column; padding:0; overflow:auto; }
+.native-web .add-member-home-button { order:-1; position:sticky; top:0; bottom:auto; flex:0 0 9cqw; height:9cqw; max-height:9cqw; min-height:0; margin:0; z-index:2; font-size:3.3cqw; }
 .native-web .cast-list { flex:0 0 auto; }
-.native-web .cast-list-row { display:grid; grid-template-columns:minmax(0,1fr) 26%; grid-template-rows:1fr 1fr; gap:0; min-height:22cqw; padding:0; }
-.native-web .cast-list-row .cast-card { grid-column:1; grid-row:1/3; display:grid; grid-template-columns:25% minmax(0,1fr); grid-template-rows:1fr 1fr; align-self:stretch; min-height:22cqw; padding:0 5px; gap:0; }
-.native-web .cast-card-name { grid-column:1; grid-row:1/3; font-size:3.8cqw; }
+.native-web .cast-list-row { display:grid; grid-template-columns:minmax(0,1fr) 26%; grid-template-rows:repeat(2,minmax(0,1fr)); gap:0; height:18cqw; min-height:0; padding:0; }
+.native-web .cast-list-row .cast-card { grid-column:1; grid-row:1/3; display:grid; grid-template-columns:25% minmax(0,1fr); grid-template-rows:repeat(2,minmax(0,1fr)); align-self:stretch; height:100%; min-height:0; padding:0 5px; gap:0; }
+.native-web .cast-card-name { grid-column:1; grid-row:1/3; font-size:3.8cqw; text-align:center; }
 .native-web .cast-card-route { grid-column:2; grid-row:1; }
 .native-web .cast-card-route-stop strong { font-size:3.4cqw; }
 .native-web .cast-card-timer { grid-column:2; grid-row:2; align-self:center; text-align:center; padding-top:3px; border-top:1px solid var(--watch-line); font-size:6cqw; }
-.native-web .cast-list-row .cast-next-button, .native-web .cast-list-row .cast-timer-action { grid-column:2; width:100%; height:100%; border:0; border-left:1px solid var(--watch-line); border-radius:0!important; }
+.native-web .cast-list-row .cast-next-button, .native-web .cast-list-row .cast-timer-action { grid-column:2; width:100%; height:100%; min-height:0; padding:0; border:0; border-left:1px solid var(--watch-line); border-radius:0!important; }
 .native-web .cast-list-row .cast-next-button { grid-row:1; border-bottom:1px solid var(--watch-line); }
 .native-web .cast-list-row .cast-timer-action { grid-row:2; font-size:5cqw; }
-.native-web .watch-face.home-medium .cast-list-row, .native-web .watch-face.home-medium .cast-card { min-height:24cqw; }
-.native-web .watch-face.home-large .cast-list-row, .native-web .watch-face.home-large .cast-card { min-height:28cqw; }
+.native-web .watch-face.home-medium .cast-list-row { height:22cqw; }
+.native-web .watch-face.home-large .cast-list-row { height:27cqw; }
 .native-web .watch-header { position:absolute; top:5%; left:16%; right:16%; height:12%; margin:0; grid-template-columns:36px minmax(0,1fr) 36px; }
 .native-web .watch-header .watch-title { font-size:5cqw; }
 .native-web .watch-face:not(.home-open):not(.manage-open) .detail-screen { position:absolute; inset:19% 0 0; padding:0; overflow:hidden; }
