@@ -12,9 +12,15 @@ android {
         targetSdk = 35
         versionCode = 24
         versionName = "2.19"
+        ndk { abiFilters += listOf("armeabi-v7a") }
     }
 
     buildTypes {
+        create("webPreview") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".webpreview"
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = false
         }
@@ -24,6 +30,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+dependencies {
+    "webPreviewImplementation"("org.mozilla.geckoview:geckoview:146.0.20251217121356")
 }
 
 

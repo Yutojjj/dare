@@ -1,10 +1,13 @@
-const CACHE_NAME = 'member-management-pwa-v69';
+const CACHE_NAME = 'member-management-pwa-v70';
 const APP_SHELL = [
   '/dare.html',
   '/watch/',
   '/watch/watch.css',
   '/watch/watch-app.js',
   '/watch/watch-core.js',
+  '/watch/watch-firebase.js',
+  '/watch/native-watch.css',
+  '/watch/native-bridge.js',
   '/watch/phone.html',
   '/watch/phone.css',
   '/watch/phone-mode.js',
@@ -36,7 +39,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  if (request.mode === 'navigate' || url.pathname.startsWith('/watch/')) {
     event.respondWith(fetch(request).then(response => {
       if (response.ok) {
         const copy = response.clone();

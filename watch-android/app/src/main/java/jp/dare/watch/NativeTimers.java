@@ -115,7 +115,9 @@ public final class NativeTimers {
         if (entry == null || entry.optBoolean("delivered")) return;
         if (entry.optLong("end") > System.currentTimeMillis() + 500) { schedule(id, entry.optLong("end")); return; }
         try { entry.put("delivered", true); prefs().edit().putString("timers", timers.toString()).commit(); } catch (JSONException ignored) { }
-        PendingIntent open = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        if (launch == null) launch = new Intent(context, MainActivity.class);
+        PendingIntent open = PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         int advance = entry.optInt("advance");
         if (advance > 0 && entry.optLong("timerEnd") <= System.currentTimeMillis()) return;
         boolean vibration = entry.optBoolean("vibration", true);

@@ -1071,6 +1071,13 @@ for (const seconds of ADVANCE_ALERT_CHOICES) {
 $('endAlertEnabled').checked = alertSettings.endEnabled;
 $('alertVibrationEnabled').checked = alertSettings.vibration;
 $('alertPlatformNote').textContent = window.DareWatchNative ? '時計の通知・アラーム許可を有効にしてください。' : 'ブラウザでは画面を開いている間にお知らせします。';
+if (window.DareWatchNative?.testNotification) {
+  for (const [label, action] of [['通知の許可', () => window.DareWatchNative.requestPermissions()], ['通知をテスト', () => window.DareWatchNative.testNotification()]]) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'home-control-clear'; button.textContent = label;
+    button.onclick = action; $('alertSettingsPanel').append(button);
+  }
+}
 for (const [tabId, panelId] of [['floorSettingsTab', 'floorSettingsPanel'], ['alertSettingsTab', 'alertSettingsPanel'], ['dayRolloverTab', 'dayRolloverPanel']]) {
   $(tabId).addEventListener('click', () => {
     for (const [tab, panel] of [['floorSettingsTab','floorSettingsPanel'],['alertSettingsTab','alertSettingsPanel'],['dayRolloverTab','dayRolloverPanel']]) {
