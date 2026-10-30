@@ -34,6 +34,12 @@ const server=http.createServer((req,res)=>{
       },size));
     }
     assert.equal(new Set(nameFonts).size,1,'member name font must not change across display sizes');
+    const wrapped=await page.evaluate(()=>{
+      controller.state.casts[0].name='非常に長い名前を省略せず表示するための確認'.repeat(3);render();
+      const name=document.querySelector('.cast-card-name'),row=name.closest('.cast-list-row');
+      return {nameBottom:name.getBoundingClientRect().bottom,rowBottom:row.getBoundingClientRect().bottom};
+    });
+    assert.ok(wrapped.nameBottom<=wrapped.rowBottom+1,'long names must expand the row instead of overlapping the next member');
     await page.evaluate(()=>{homeCardSize='small';render();});
     await page.evaluate(()=>openCast(controller.state.casts[0].id));
     const next=await page.locator('#nextTableAction').boundingBox();

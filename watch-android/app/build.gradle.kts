@@ -10,8 +10,8 @@ android {
         applicationId = "jp.dare.watch"
         minSdk = 30
         targetSdk = 35
-        versionCode = 26
-        versionName = "2.21"
+        versionCode = 27
+        versionName = "2.22"
         ndk { abiFilters += listOf("armeabi-v7a") }
     }
 

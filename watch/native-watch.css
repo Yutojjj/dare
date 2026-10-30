@@ -117,6 +117,8 @@
 .native-web .watch-face.home-large { --watch-row-size:27cqw; }
 .native-web .cast-list-row { height:auto; min-height:var(--watch-row-size); }
 .native-web .cast-list-row .cast-card { height:auto; min-height:var(--watch-row-size); }
+.native-web .watch-face.home-medium .cast-list-row,
+.native-web .watch-face.home-large .cast-list-row { height:auto; min-height:var(--watch-row-size); }
 .native-web .watch-face .cast-card-name,
 .native-web .watch-face.home-medium .cast-card-name,
 .native-web .watch-face.home-large .cast-card-name { font-size:3.8cqw; line-height:1.2; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
