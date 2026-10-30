@@ -904,6 +904,12 @@ function openCast(castId) {
   render();
 }
 
+document.addEventListener('dare-watch-open-cast', () => {
+  const id=document.documentElement.getAttribute('data-watch-open-cast');
+  if (controller.state.casts.some(cast => cast.id === id)) openCast(id);
+  else showHome();
+});
+
 function showHome() {
   selectedCastId = null;
   managerOpen = false;
@@ -1104,7 +1110,7 @@ $('dayRolloverTime').value = rolloverTime;
 $('dayRolloverTime').addEventListener('change', () => { rolloverTime = $('dayRolloverTime').value || '06:00'; storage?.setItem(DAY_ROLLOVER_KEY, rolloverTime); lastAppliedDay = ''; applyDailyMembers(); render(); });
 function saveAlertSettings() {
   try { storage?.setItem(ALERT_SETTINGS_KEY, JSON.stringify(alertSettings)); } catch {}
-  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings }));
+  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
 }
 for (const id of ['endAlertEnabled', 'alertVibrationEnabled']) {
   $(id).addEventListener('change', () => {
@@ -1174,7 +1180,7 @@ function startWatchScreen() {
   window.setInterval(() => { applyDailyMembers(); checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
 }
 window.WatchFirebase.start(store, () => {
-  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings }));
+  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
   render();
 }).then(startWatchScreen).catch(error => {
   console.error('Firebase共有へ接続できませんでした', error);

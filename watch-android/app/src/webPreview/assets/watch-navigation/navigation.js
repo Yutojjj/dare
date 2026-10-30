@@ -2,6 +2,10 @@
   const port = browser.runtime.connectNative('dare_watch_navigation');
   port.onMessage.addListener(message => {
     if (message?.type === 'back') document.dispatchEvent(new Event('dare-watch-back'));
+    if (message?.type === 'openCast' && typeof message.castId === 'string') {
+      document.documentElement.setAttribute('data-watch-open-cast',message.castId);
+      document.dispatchEvent(new Event('dare-watch-open-cast'));
+    }
   });
   let previous, previousReady;
   const update = () => {

@@ -24,6 +24,7 @@ public final class WebWatchActivity extends Activity {
     private float startX, startY;
     private String page = "";
     private long pausedAt;
+    private String pendingCastId;
     private static final String HOST = "dare-alpha-ten.vercel.app";
     private boolean trusted(Uri uri) {
         return ("https".equals(uri.getScheme()) && HOST.equals(uri.getHost()) && uri.getPath().startsWith("/watch/"))
@@ -32,6 +33,7 @@ public final class WebWatchActivity extends Activity {
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        pendingCastId=getIntent().getStringExtra("castId");
         getWindow().getDecorView().setSystemUiVisibility(5894);
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
@@ -77,7 +79,7 @@ public final class WebWatchActivity extends Activity {
                                 if (android.os.Build.VERSION.SDK_INT >= 31) startActivity(new android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));
                             }
                             String raw = uri.getQueryParameter("payload");
-                            if (raw != null && raw.length() <= 1000000 && "sync".equals(uri.getHost())) timers.syncTimers(raw);
+                            if (raw != null && raw.length() <= 1000000 && "sync".equals(uri.getHost())) { timers.syncTimers(raw); WatchTileService.save(WebWatchActivity.this,raw); }
                         } catch (Exception error) { android.util.Log.e("DareWeb", "Timer bridge rejected", error); }
                     }
                     return GeckoResult.fromValue(AllowOrDeny.DENY);
@@ -97,7 +99,7 @@ public final class WebWatchActivity extends Activity {
                     if(port.sender.session!=session || !port.sender.isTopLevel() || port.sender.url==null || !trusted(Uri.parse(port.sender.url))){port.disconnect();return;}
                     navigationPort=port;
                     port.setDelegate(new WebExtension.PortDelegate(){
-                        @Override public void onPortMessage(Object message,WebExtension.Port from){if(message instanceof org.json.JSONObject){org.json.JSONObject state=(org.json.JSONObject)message;webCanGoBack=state.optBoolean("canBack");if(state.optBoolean("ready"))loadingView.setVisibility(View.GONE);}}
+                        @Override public void onPortMessage(Object message,WebExtension.Port from){if(message instanceof org.json.JSONObject){org.json.JSONObject state=(org.json.JSONObject)message;webCanGoBack=state.optBoolean("canBack");if(state.optBoolean("ready")){loadingView.setVisibility(View.GONE);openPendingCast();}}}
                         @Override public void onDisconnect(WebExtension.Port from){if(navigationPort==from){navigationPort=null;webCanGoBack=false;}}
                     });
                 }
@@ -119,6 +121,8 @@ public final class WebWatchActivity extends Activity {
         return super.dispatchTouchEvent(event);
     }
     private void sendWebBack(){if(navigationPort!=null){org.json.JSONObject command=new org.json.JSONObject();try{command.put("type","back");navigationPort.postMessage(command);}catch(org.json.JSONException error){android.util.Log.e("DareWeb","Back command failed",error);}}}
+    @Override protected void onNewIntent(android.content.Intent intent){super.onNewIntent(intent);setIntent(intent);pendingCastId=intent.getStringExtra("castId");if(loadingView.getVisibility()!=View.VISIBLE)openPendingCast();}
+    private void openPendingCast(){if(pendingCastId==null||navigationPort==null)return;try{org.json.JSONObject command=new org.json.JSONObject().put("type","openCast").put("castId",pendingCastId);navigationPort.postMessage(command);pendingCastId=null;}catch(org.json.JSONException ignored){}}
     private void backHaptic(){android.os.Vibrator vibrator=(android.os.Vibrator)getSystemService(VIBRATOR_SERVICE);if(vibrator!=null&&vibrator.hasVibrator())vibrator.vibrate(android.os.VibrationEffect.createOneShot(22,android.os.VibrationEffect.DEFAULT_AMPLITUDE));}
     private void navigateBack(){if(navigationPort!=null&&webCanGoBack)sendWebBack();else finishAndRemoveTask();}
     @Override public void onBackPressed(){navigateBack();}

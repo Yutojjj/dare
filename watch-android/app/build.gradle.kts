@@ -10,8 +10,8 @@ android {
         applicationId = "jp.dare.watch"
         minSdk = 30
         targetSdk = 35
-        versionCode = 28
-        versionName = "2.23"
+        versionCode = 29
+        versionName = "2.24"
         ndk { abiFilters += listOf("armeabi-v7a") }
     }
 
@@ -33,6 +33,10 @@ android {
 }
 
 dependencies {
+    "testImplementation"("junit:junit:4.13.2")
+    "testImplementation"("org.json:json:20250517")
+    "webPreviewImplementation"("androidx.wear.tiles:tiles:1.4.1")
+    "webPreviewImplementation"("androidx.wear.protolayout:protolayout:1.2.1")
     "webPreviewImplementation"("org.mozilla.geckoview:geckoview:146.0.20251217121356")
 }
 

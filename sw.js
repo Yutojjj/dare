@@ -1,4 +1,4 @@
-const CACHE_NAME = 'member-management-pwa-v74';
+const CACHE_NAME = 'member-management-pwa-v75';
 const APP_SHELL = [
   '/dare.html',
   '/watch/',
