@@ -57,12 +57,33 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('.route-choice-floor').count(),10);
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-route.png')});
     await page.evaluate(()=>closeRouteEditor());
+    await page.evaluate(()=>{const cast=controller.state.casts[0];cast.name='ゆう';cast.currentTableId='table-8';cast.destinationTableId='table-7';requestTableMove(cast);});
+    assert.deepEqual(await page.locator('#actionConfirmMessage span').allTextContents(),['ゆう','2階・8卓','↓','2階・7卓']);
+    for(const width of [225,396]){
+      await page.setViewportSize({width,height:width});
+      const lines=await page.locator('#actionConfirmMessage span').evaluateAll(items=>items.map(item=>{const b=item.getBoundingClientRect();return {y:b.y,bottom:b.bottom,font:parseFloat(getComputedStyle(item).fontSize)};}));
+      assert.ok(lines.slice(1).every((line,i)=>lines[i].bottom<=line.y),'movement confirmation lines must not overlap');
+      assert.ok(lines[1].font>=width*.07,'table names must be large and clear');
+      const button=await page.locator('#approveActionConfirm').boundingBox();assert.ok(lines.at(-1).bottom<button.y);
+    }
+    await page.screenshot({path:path.join(root,'watch-android/preview-isolated-move-confirm.png')});
+    await page.evaluate(()=>closeActionConfirmation());
+    await page.evaluate(()=>{openActionConfirmation('削除の確認','確認用',()=>{});});
+    assert.equal(await page.locator('#actionConfirmDialog').evaluate(el=>el.classList.contains('table-move-confirmation')),false,'deletion must keep its ordinary confirmation layout');
+    await page.evaluate(()=>closeActionConfirmation());
     await page.evaluate(()=>openPerformanceInput(controller.state.casts[0]));
     await page.waitForFunction(()=>document.querySelectorAll('.performance-row').length===2);
+    for(const width of [225,396]){
+      await page.setViewportSize({width,height:width});
+      const title=await page.locator('#performanceTitle').boundingBox(),date=await page.locator('#performanceDate').boundingBox(),label=await page.locator('.performance-row strong').first().boundingBox();
+      assert.ok(title.y+title.height<date.y,'performance date must sit below its title');
+      assert.ok(date.y+date.height<label.y,'member and date must not overlap the first metric label');
+    }
     const lastStep=await page.locator('.performance-stepper').last().boundingBox();
     const save=await page.locator('#savePerformance').boundingBox();assert.ok(lastStep.y+lastStep.height<save.y);
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-performance.png')});
     await page.evaluate(()=>closePerformance());
+    await page.setViewportSize({width:225,height:225});
     await page.evaluate(()=>openTimerDialog());
     await page.evaluate(()=>setWheelValue('seconds',30,true));
     assert.equal(await page.locator('#secondWheel .selected').textContent(),'30');

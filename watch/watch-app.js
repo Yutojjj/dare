@@ -211,8 +211,21 @@ function requestTableMove(cast) {
     const latest = controller.getCast(cast.id);
     if (latest?.currentTableId === from && latest?.destinationTableId === to && controller.moveToDestination(cast.id)) render();
   }, '移動する');
+  $('actionConfirmDialog').classList.add('table-move-confirmation');
+  $('actionConfirmMessage').replaceChildren();
+  for (const [className, text] of [
+    ['move-confirm-name', cast.name],
+    ['move-confirm-table', currentTableLabel(cast)],
+    ['move-confirm-arrow', '↓'],
+    ['move-confirm-table', nextTableLabel(cast)],
+  ]) {
+    const line = document.createElement('span');
+    line.className = className; line.textContent = text;
+    $('actionConfirmMessage').append(line);
+  }
 }
 function openActionConfirmation(title, message, action, label = '削除') {
+  $('actionConfirmDialog').classList.remove('table-move-confirmation');
   $('approveActionConfirm').textContent = label;
   $('actionConfirmTitle').textContent = title;
   $('actionConfirmMessage').textContent = message;

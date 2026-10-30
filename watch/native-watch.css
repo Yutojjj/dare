@@ -79,9 +79,17 @@
 .native-web .timer-dialog-header { flex:0 0 auto; min-height:9cqw; }
 .native-web .timer-dialog-actions { position:absolute; bottom:18%; left:14%; right:14%; height:10cqw; margin:0; gap:2cqw; }
 .native-web .timer-dialog-actions button { min-height:0; padding:0 2px; font-size:3.2cqw; }
-.native-web .performance-date { font-size:3cqw; margin:0; }
-.native-web .performance-rows { position:absolute; top:28%; left:14%; right:14%; bottom:32%; padding:0; }
-.native-web .performance-row { margin:0; padding:0; border:0; height:19cqw; }
+.native-web .performance-date { font-size:3.3cqw; margin:0; }
+.native-web #performanceDialog .timer-dialog-header { position:absolute; top:13%; left:18%; right:18%; height:9%; min-height:0; }
+.native-web #performanceDate { position:absolute; top:23%; left:16%; right:16%; height:6%; line-height:1.2; overflow-wrap:anywhere; }
+.native-web .performance-rows { position:absolute; top:32%; left:14%; right:14%; bottom:31%; padding:0; }
+.native-web .performance-row { margin:0 0 1cqw; padding:0 0 2cqw; border:0; height:auto; min-height:19cqw; }
+.native-web #performanceStatus { position:absolute; top:70%; left:18%; right:18%; height:6%; font-size:2.8cqw; line-height:1.2; }
+.native-web #performanceDialog .timer-dialog-actions { bottom:13%; left:18%; right:18%; height:10%; }
+.native-web .table-move-confirmation .action-confirm-message { position:absolute; top:26%; bottom:30%; left:12%; right:12%; margin:0; justify-content:center; gap:1cqw; overflow-y:auto; line-height:1.15; }
+.native-web .table-move-confirmation .move-confirm-name { font-size:6cqw; }
+.native-web .table-move-confirmation .move-confirm-table { font-size:7.5cqw; }
+.native-web .table-move-confirmation .move-confirm-arrow { font-size:6cqw; }
 .native-web .performance-row strong { font-size:3.5cqw; margin:0 0 2cqw; }
 .native-web .performance-stepper { grid-template-columns:14cqw minmax(0,1fr) 14cqw; gap:2cqw; }
 .native-web .performance-stepper button { min-height:0; height:10cqw; font-size:5cqw; border:1px solid var(--watch-line); background:transparent; color:inherit; }

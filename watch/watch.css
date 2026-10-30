@@ -180,6 +180,10 @@ button { color: inherit; font: inherit; touch-action: manipulation; border-radiu
 .action-confirm-backdrop { z-index: 7; }
 .action-confirm-dialog { max-width: 320px; }
 .action-confirm-message { margin: 8px 2px 12px; color: var(--watch-muted); font-size: clamp(11px, 3.2cqw, 14px); text-align: center; }
+.table-move-confirmation .action-confirm-message { display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--watch-text,#f3f5f9); overflow-wrap:anywhere; }
+.move-confirm-name { font-size:24px; font-weight:750; }
+.move-confirm-table { font-size:28px; font-weight:750; }
+.move-confirm-arrow { font-size:25px; line-height:1; }
 .action-confirm-dialog .timer-dialog-actions button:last-child { border-color: #74414a; color: #ffabb4; }
 .member-actions-backdrop { z-index: 6; }
 .member-actions-dialog { max-width: 300px; }
