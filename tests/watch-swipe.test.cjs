@@ -24,14 +24,15 @@ test('native gesture command closes the top modal without touching underlying st
   const low=screen(6),high=screen(8),ui=setup([low,high]);ui.nativeBack();
   assert.equal(high.closed,1);assert.equal(low.closed,0);assert.equal(ui.back.clicked,0);
 });
-test('bundled navigation bridge reports modal state and accepts only back commands',()=>{
-  let message,observer;const posted=[],events=[];const element={hidden:true};
+test('bundled navigation bridge reports modal state and waits for the completed screen',()=>{
+  let message,observer,boot={};const posted=[],events=[];const element={hidden:true};
   const port={onMessage:{addListener:fn=>message=fn},postMessage:value=>posted.push(value)};
   vm.runInNewContext(fs.readFileSync('watch-android/app/src/webPreview/assets/watch-navigation/navigation.js','utf8'),{
     browser:{runtime:{connectNative:()=>port}},Event,
-    document:{readyState:'complete',documentElement:{},querySelectorAll:()=>[element],dispatchEvent:event=>events.push(event.type)},
+    document:{readyState:'complete',documentElement:{},getElementById:()=>boot,querySelectorAll:()=>[element],dispatchEvent:event=>events.push(event.type)},
     MutationObserver:class{constructor(fn){observer=fn;}observe(){}}
   });
   assert.equal(posted[0].canBack,false);element.hidden=false;observer();observer();assert.equal(posted.length,2);assert.equal(posted[1].canBack,true);
+  assert.equal(posted[0].ready,false);boot=null;observer();assert.equal(posted[2].ready,true);
   message({type:'other'});message({type:'back'});assert.deepEqual(events,['dare-watch-back']);
 });

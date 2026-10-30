@@ -1168,7 +1168,9 @@ function startWatchScreen() {
   applyDailyMembers();
   controller.tick();
   render();
-  $('watchBoot')?.remove();
+  // Wait for the final layout and fonts before revealing the screen. The APK
+  // observes removal of this cover and reveals the same completed frame.
+  Promise.resolve(document.fonts?.ready).then(() => requestAnimationFrame(() => requestAnimationFrame(() => $('watchBoot')?.remove())));
   window.setInterval(() => { applyDailyMembers(); checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
 }
 window.WatchFirebase.start(store, () => {

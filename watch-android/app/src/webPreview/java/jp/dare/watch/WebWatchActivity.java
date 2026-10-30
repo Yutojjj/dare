@@ -54,7 +54,9 @@ public final class WebWatchActivity extends Activity {
         android.util.Log.i("DareWeb", "create runtime"); if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext()); android.util.Log.i("DareWeb", "runtime ready");
         session = new GeckoSession();
         session.setContentDelegate(new GeckoSession.ContentDelegate() {
-            @Override public void onFirstContentfulPaint(GeckoSession s) { loadingView.setVisibility(View.GONE); }
+            // The first paint can still be the HTML loading screen. Keep the
+            // native cover until the page reports that its layout is ready.
+            @Override public void onFirstContentfulPaint(GeckoSession s) { }
         });
         session.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
             @Override public GeckoResult<String> onLoadError(GeckoSession s, String uri, WebRequestError error) {
@@ -95,7 +97,7 @@ public final class WebWatchActivity extends Activity {
                     if(port.sender.session!=session || !port.sender.isTopLevel() || port.sender.url==null || !trusted(Uri.parse(port.sender.url))){port.disconnect();return;}
                     navigationPort=port;
                     port.setDelegate(new WebExtension.PortDelegate(){
-                        @Override public void onPortMessage(Object message,WebExtension.Port from){if(message instanceof org.json.JSONObject)webCanGoBack=((org.json.JSONObject)message).optBoolean("canBack");}
+                        @Override public void onPortMessage(Object message,WebExtension.Port from){if(message instanceof org.json.JSONObject){org.json.JSONObject state=(org.json.JSONObject)message;webCanGoBack=state.optBoolean("canBack");if(state.optBoolean("ready"))loadingView.setVisibility(View.GONE);}}
                         @Override public void onDisconnect(WebExtension.Port from){if(navigationPort==from){navigationPort=null;webCanGoBack=false;}}
                     });
                 }
@@ -104,18 +106,20 @@ public final class WebWatchActivity extends Activity {
         }, error->{android.util.Log.e("DareWeb","Navigation bridge unavailable",error);if(!isFinishing()&&!isDestroyed())session.loadUri(target);});
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 20);
     }
-    @Override protected void onResume() { super.onResume(); if (session != null) { session.setActive(true); if(pausedAt>0 && System.currentTimeMillis()-pausedAt>60000) session.reload(); } if (timers != null) timers.restore(); }
+    @Override protected void onResume() { super.onResume(); if (session != null) session.setActive(true); if (timers != null) timers.restore(); }
     @Override protected void onPause() { pausedAt=System.currentTimeMillis(); if (session != null) session.setActive(false); super.onPause(); }
     @Override protected void onDestroy() { if (session != null) session.close(); super.onDestroy(); }
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
         if(browserView==null)return super.dispatchTouchEvent(event);
         int action=event.getActionMasked();
-        if(action==MotionEvent.ACTION_DOWN){startX=event.getX();startY=event.getY();nativeSwiping=false;edgeCandidate=navigationPort!=null&&webCanGoBack&&startX<browserView.getWidth()*.55f;if(edgeCandidate&&browserView.getParent()!=null)browserView.getParent().requestDisallowInterceptTouchEvent(true);}
+        if(action==MotionEvent.ACTION_DOWN){startX=event.getX();startY=event.getY();nativeSwiping=false;edgeCandidate=navigationPort!=null&&loadingView.getVisibility()!=View.VISIBLE&&startX<browserView.getWidth()*.55f;if(edgeCandidate&&browserView.getParent()!=null)browserView.getParent().requestDisallowInterceptTouchEvent(true);}
         if(action==MotionEvent.ACTION_MOVE&&edgeCandidate){float dx=event.getX()-startX,dy=Math.abs(event.getY()-startY);if(!nativeSwiping&&dx>browserView.getWidth()*.08f&&dx>dy*1.3f){nativeSwiping=true;MotionEvent cancel=MotionEvent.obtain(event);cancel.setAction(MotionEvent.ACTION_CANCEL);super.dispatchTouchEvent(cancel);cancel.recycle();}if(nativeSwiping)return true;}
-        if(action==MotionEvent.ACTION_UP&&nativeSwiping){float dx=event.getX()-startX;nativeSwiping=false;edgeCandidate=false;if(dx>browserView.getWidth()*.25f)sendWebBack();return true;}
+        if(action==MotionEvent.ACTION_UP&&nativeSwiping){float dx=event.getX()-startX;nativeSwiping=false;edgeCandidate=false;if(dx>browserView.getWidth()*.25f){backHaptic();navigateBack();}return true;}
         if(action==MotionEvent.ACTION_CANCEL){boolean consumed=nativeSwiping;nativeSwiping=false;edgeCandidate=false;if(consumed)return true;}
         return super.dispatchTouchEvent(event);
     }
     private void sendWebBack(){if(navigationPort!=null){org.json.JSONObject command=new org.json.JSONObject();try{command.put("type","back");navigationPort.postMessage(command);}catch(org.json.JSONException error){android.util.Log.e("DareWeb","Back command failed",error);}}}
-    @Override public void onBackPressed(){if(navigationPort!=null&&webCanGoBack)sendWebBack();else super.onBackPressed();}
+    private void backHaptic(){android.os.Vibrator vibrator=(android.os.Vibrator)getSystemService(VIBRATOR_SERVICE);if(vibrator!=null&&vibrator.hasVibrator())vibrator.vibrate(android.os.VibrationEffect.createOneShot(22,android.os.VibrationEffect.DEFAULT_AMPLITUDE));}
+    private void navigateBack(){if(navigationPort!=null&&webCanGoBack)sendWebBack();else finishAndRemoveTask();}
+    @Override public void onBackPressed(){navigateBack();}
 }

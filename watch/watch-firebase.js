@@ -39,7 +39,23 @@
       const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
       const ref = firebase.firestore(app).collection('shared').doc('watch');
       const local = store.state;
-      const first = await ref.get();
+      // Use the same subscription for the first load and later updates, rather
+      // than fetching the entire shared state twice during startup.
+      const first = await new Promise((resolve, reject) => {
+        let initial = true;
+        ref.onSnapshot(snapshot => {
+          if (initial) { initial = false; resolve(snapshot); return; }
+          if (!snapshot.exists || !ready) return;
+          const state = snapshot.data()?.state;
+          if (!state || state.version !== 2) return;
+          applyingRemote = true;
+          try {
+            store.state = state;
+            localStorage.setItem('cast-watch-v1', JSON.stringify(state));
+            onRemote();
+          } finally { applyingRemote = false; }
+        }, error => { if (initial) { initial = false; reject(error); } else console.error('ウォッチ共有の受信に失敗しました', error); });
+      });
       if (first.exists && first.data()?.state?.version === 2) {
         applyingRemote = true;
         store.state = first.data().state;
@@ -64,16 +80,6 @@
         localStorage.setItem('member-management-v1', JSON.stringify(directory));
         onRemote();
       }, error => console.error('キャスト候補の受信に失敗しました', error));
-      ref.onSnapshot(snapshot => {
-        if (!snapshot.exists || !ready) return;
-        const state = snapshot.data()?.state;
-        if (!state || state.version !== 2) return;
-        applyingRemote = true;
-        store.state = state;
-        localStorage.setItem('cast-watch-v1', JSON.stringify(state));
-        onRemote();
-        applyingRemote = false;
-      }, error => console.error('ウォッチ共有の受信に失敗しました', error));
     },
   };
 })();
