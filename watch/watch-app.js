@@ -39,7 +39,6 @@ let selectedMinutes = 0;
 let selectedSeconds = 0;
 const wheelOptions = { minutes: [], seconds: [] };
 const wheelRowHeight = type => wheelOptions[type]?.[0]?.getBoundingClientRect().height || 42;
-let toastTimer = 0;
 const controller = new WatchController(store, showTimerAlert);
 const MEMBER_DIRECTORY_KEY = 'member-management-v1';
 let appMembers = readAppMembers();
@@ -967,16 +966,13 @@ function showHome() {
   render();
 }
 
-function showTimerAlert({ name }) {
+function showTimerAlert() {
   if (!alertSettings.endEnabled) return;
   $('watchFace').classList.add('timer-alert');
-  $('watchToast').textContent = `${name}　時間です`;
-  $('watchToast').hidden = false;
+  $('watchToast').hidden = true;
   try {
-    if (alertSettings.vibration && typeof navigator.vibrate === 'function') navigator.vibrate([220, 100, 220]);
+    if (!window.DareWatchNative && alertSettings.vibration && typeof navigator.vibrate === 'function') navigator.vibrate([220, 100, 220]);
   } catch { /* Vibration is optional and unavailable on some devices. */ }
-  clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => { $('watchToast').hidden = true; }, 6_000);
 }
 
 $('backButton').addEventListener('click', showHome);
@@ -1215,11 +1211,8 @@ function checkAdvanceAlerts() {
       }
     }
     if (!due) continue;
-    $('watchToast').textContent = `${cast.name}　残り${Math.ceil(remaining / 1000)}秒`;
-    $('watchToast').hidden = false;
+    $('watchToast').hidden = true;
     if (!window.DareWatchNative && alertSettings.vibration && navigator.vibrate) navigator.vibrate([150, 100, 150]);
-    clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => { $('watchToast').hidden = true; }, 6000);
   }
 }
 function applyDailyMembers() {
