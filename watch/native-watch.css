@@ -62,4 +62,54 @@
 .native-web .member-actions-dialog .timer-dialog-header { flex:0 0 auto; min-height:10cqw; }
 .native-web .member-actions-list { display:flex; flex-direction:column; gap:12px; margin-top:8cqw; }
 .native-web .member-actions-list button { min-height:17cqw; font-size:4.5cqw; }
+.native-web { touch-action:pan-y; }
+.native-web .watch-header { grid-template-columns:10cqw minmax(0,1fr) 10cqw; }
+.native-web .watch-header .header-icon-button { width:10cqw; height:10cqw; min-height:0; }
+.native-web .watch-header .header-icon-button svg { width:5.5cqw; height:5.5cqw; }
+.native-web .timer-controls button { padding:0; display:grid; place-items:center; line-height:1; }
+.native-web #resetTimerButton svg { width:6cqw; height:6cqw; display:block; }
+.native-web .timer-presets[data-count="1"] { grid-template-columns:repeat(1,minmax(0,1fr)); }
+.native-web .timer-presets[data-count="2"] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.native-web .timer-presets[data-count="3"] { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.native-web .timer-presets[data-count="4"] { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.native-web .timer-presets[data-count="5"] { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.native-web .timer-presets button { height:100%; min-height:0; padding:0; line-height:1; }
+.native-web .timer-dialog-backdrop { display:block; padding:0; }
+.native-web .timer-dialog { position:relative; display:flex; flex-direction:column; height:100%; max-height:none; padding:16% 12% 14%; overflow:hidden; gap:2cqw; }
+.native-web .timer-dialog-header { flex:0 0 auto; min-height:9cqw; }
+.native-web .timer-dialog-actions { position:absolute; bottom:18%; left:14%; right:14%; height:10cqw; margin:0; gap:2cqw; }
+.native-web .timer-dialog-actions button { min-height:0; padding:0 2px; font-size:3.2cqw; }
+.native-web .performance-date { font-size:3cqw; margin:0; }
+.native-web .performance-rows { position:absolute; top:28%; left:14%; right:14%; bottom:32%; padding:0; }
+.native-web .performance-row { margin:0; padding:0; border:0; height:19cqw; }
+.native-web .performance-row strong { font-size:3.5cqw; margin:0 0 2cqw; }
+.native-web .performance-stepper { grid-template-columns:14cqw minmax(0,1fr) 14cqw; gap:2cqw; }
+.native-web .performance-stepper button { min-height:0; height:10cqw; font-size:5cqw; border:1px solid var(--watch-line); background:transparent; color:inherit; }
+.native-web .performance-stepper output { font-size:6.5cqw; }
+.native-web .route-editor-hint { position:absolute; top:24%; left:12%; right:12%; font-size:2.7cqw; margin:0; line-height:1; }
+.native-web .route-editor-choices { position:absolute; top:28%; bottom:31%; left:12%; right:12%; }
+.native-web .route-editor-table-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:1cqw; }
+.native-web .route-editor-choice { position:relative; min-height:0; height:9cqw; justify-content:center; gap:1cqw; padding:2.3cqw 1cqw 0; }
+.native-web .route-choice-floor { position:absolute; top:.3cqw; left:1cqw; font-size:1.8cqw; color:#aab3c1; }
+.native-web .route-choice-number { width:auto; height:auto; min-width:3cqw; flex-basis:auto; font-size:3cqw; border:0; background:transparent!important; color:inherit!important; }
+.native-web .route-choice-name { font-size:3.2cqw; }
+.native-web .member-picker-dialog .timer-dialog-header { grid-template-columns:minmax(0,1fr) auto; gap:1cqw; }
+.native-web .member-picker-dialog h2 { font-size:4cqw; }
+.native-web .member-day-filter-toggle { min-height:9cqw; font-size:2.8cqw; padding:0 2cqw; }
+.native-web .member-picker-status { font-size:2.6cqw; min-height:0; flex:0 0 auto; line-height:1.3; }
+.native-web .member-picker-list { flex:1 1 0; min-height:0; gap:0; }
+.native-web .member-picker-row { min-height:11cqw; padding:0; gap:2cqw; }
+.native-web .member-picker-name { font-size:4.5cqw; }
+.native-web .member-picker-action { min-width:16cqw; min-height:9cqw; font-size:3.2cqw; padding:0; }
+.native-web .timer-dialog-hint { font-size:2.6cqw; margin:0; }
+.native-web .time-wheel-picker { margin-top:3cqw; gap:2cqw; }
+.native-web .time-wheel { height:33cqw; padding:11cqw 0; }
+.native-web .wheel-option { height:11cqw; font-size:5cqw; }
+.native-web .wheel-option.selected { font-size:7cqw; }
+.native-web .time-wheel-column::after { height:11cqw; border:0; border-radius:0; background:#1e4346; }
+.native-web .wheel-unit { font-size:2.7cqw; }
+.native-web .wheel-colon { font-size:5cqw; }
+.native-web .wheel-time-readout { font-size:3.3cqw; margin-top:2cqw; }
+.native-web .timer-config-message { font-size:2.5cqw; }
+.native-web .timer-saved-choices { display:none; }
 

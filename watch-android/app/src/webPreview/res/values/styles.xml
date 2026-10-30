@@ -1,0 +1,6 @@
+<resources>
+    <style name="WebWatchTheme" parent="WatchTheme">
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:windowSplashScreenBackground">#000000</item>
+    </style>
+</resources>

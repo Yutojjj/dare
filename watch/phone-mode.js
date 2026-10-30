@@ -19,7 +19,7 @@
     const touch = event.touches[0];
     startX = touch.clientX;
     startY = touch.clientY;
-    tracking = startX <= 28;
+    tracking = startX <= innerWidth * .55;
     surface = topDialog() || [...document.querySelectorAll('#detailScreen,#manageScreen')].find(screen => !screen.hidden) || null;
     tracking = tracking && !!surface;
     dragged = false;

@@ -34,7 +34,7 @@ let timerChoices = loadTimerChoices();
 let selectedMinutes = 0;
 let selectedSeconds = 0;
 const wheelOptions = { minutes: [], seconds: [] };
-const WHEEL_ROW_HEIGHT = 42;
+const wheelRowHeight = type => wheelOptions[type]?.[0]?.getBoundingClientRect().height || 42;
 let toastTimer = 0;
 const controller = new WatchController(store, showTimerAlert);
 const MEMBER_DIRECTORY_KEY = 'member-management-v1';
@@ -142,7 +142,7 @@ function setWheelValue(type, value, scroll = false) {
     option.setAttribute('aria-selected', String(index === selected));
     option.classList.toggle('selected', index === selected);
   });
-  if (scroll) $(type === 'minutes' ? 'minuteWheel' : 'secondWheel').scrollTop = selected * WHEEL_ROW_HEIGHT;
+  if (scroll) $(type === 'minutes' ? 'minuteWheel' : 'secondWheel').scrollTop = selected * wheelRowHeight(type);
   const total = selectedMinutes * 60 + selectedSeconds;
   $('wheelTimeReadout').textContent = `${selectedMinutes}分${String(selectedSeconds).padStart(2, '0')}秒`;
   $('timerConfigMessage').textContent = total ? '' : '分・秒を選んでください';
@@ -166,7 +166,7 @@ function buildTimeWheel(type, count, label) {
     wheel.append(option);
   }
   wheel.addEventListener('scroll', () => {
-    const index = Math.round((wheel.scrollTop ?? 0) / WHEEL_ROW_HEIGHT);
+    const index = Math.round((wheel.scrollTop ?? 0) / wheelRowHeight(type));
     const value = type === 'seconds' ? index * 10 : index;
     setWheelValue(type, value);
   });
@@ -415,10 +415,14 @@ function renderRouteEditor() {
   const tables = allWatchTables();
   const choices = $('routeEditorChoices');
   choices.replaceChildren();
+  const compact=document.body.classList.contains('native-web');
+  if(compact)$('routeEditorHint').textContent='押した順に番号が付きます';
+  const flatGrid=document.createElement('div'); flatGrid.className='route-editor-table-grid';
+  if(compact)choices.append(flatGrid);
   controller.state.floors.forEach(floor => {
     if (!floor.tables.length) return;
-    const heading = document.createElement('h3'); heading.className = 'route-editor-floor'; heading.textContent = floor.name; choices.append(heading);
-    const grid = document.createElement('div'); grid.className = 'route-editor-table-grid';
+    if(!compact){const heading = document.createElement('h3'); heading.className = 'route-editor-floor'; heading.textContent = floor.name; choices.append(heading);}
+    const grid = compact?flatGrid:document.createElement('div'); grid.className = 'route-editor-table-grid';
     floor.tables.forEach(table => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'route-editor-choice';
       const order = routeDraft.indexOf(table.id);
@@ -428,7 +432,8 @@ function renderRouteEditor() {
       button.classList.toggle('current', included && isCurrent);
       button.innerHTML = `<span class="route-choice-number">${included ? order + 1 : '＋'}</span><span class="route-choice-name"></span>`;
       button.querySelector('.route-choice-name').textContent = table.name;
-      if (isCurrent) button.querySelector('.route-choice-name').textContent += '（現在）';
+      if (isCurrent && !compact) button.querySelector('.route-choice-name').textContent += '（現在）';
+      if(compact){const tag=document.createElement('span');tag.className='route-choice-floor';tag.textContent=floor.name;button.append(tag);}
       button.setAttribute('aria-pressed', String(included));
       button.setAttribute('aria-label', included ? `${order + 1}番目、${floor.name} ${table.name}${isCurrent ? '、現在の卓' : ''}。押すと選択解除` : `${floor.name} ${table.name}を推移卓に追加、${routeDraft.length + 1}番目`);
       button.addEventListener('click', () => {
@@ -439,7 +444,7 @@ function renderRouteEditor() {
       });
       grid.append(button);
     });
-    choices.append(grid);
+    if(!compact)choices.append(grid);
   });
   $('saveRouteEditor').textContent = isAdding ? 'この推移で追加' : '推移を保存';
   $('saveRouteEditor').disabled = routeDraft.length < 1 || (!isAdding && !cast);
@@ -1183,8 +1188,9 @@ function performanceDay() {
 async function openPerformanceInput(cast) {
   if (performanceBusy) return;
   performanceBusy = true;
-  $('performanceTitle').textContent = `${cast.name} 実績入力`;
-  $('performanceDate').textContent = performanceDay();
+  $('performanceTitle').textContent = '実績入力';
+  $('performanceDate').dataset.date = performanceDay();
+  $('performanceDate').textContent = `${cast.name}　${$('performanceDate').dataset.date}`;
   $('performanceRows').replaceChildren();
   $('performanceStatus').textContent = '読み込み中…';
   $('savePerformance').disabled = true;
@@ -1193,7 +1199,7 @@ async function openPerformanceInput(cast) {
     const state = await window.WatchFirebase.readPerformance();
     const member = state.members.find(item => String(item.id) === String(cast.id));
     if (!member) throw new Error('管理アプリに登録されたキャストを選んでください');
-    const date = $('performanceDate').textContent;
+    const date = $('performanceDate').dataset.date;
     const fields = [{ id: 'nominations', name: '本指名数' }, { id: 'freebacks', name: 'フリーバック数' }, ...(state.monthlyMetricFields ?? []).filter(item => /^metric_[a-z0-9-]+$/.test(item.id))];
     const base = {}, values = {};
     performanceDraft = { memberId: cast.id, date, fields, base, values };

@@ -15,7 +15,7 @@ const server=http.createServer((req,res)=>{
     const page=await browser.newPage({viewport:{width:396,height:396},hasTouch:true});
     await page.route('**/*',route=>{
       const url=route.request().url();
-      if(url.endsWith('/watch-firebase.js'))return route.fulfill({contentType:'application/javascript',body:'window.WatchFirebase={start(){}};'});
+      if(url.endsWith('/watch-firebase.js'))return route.fulfill({contentType:'application/javascript',body:'window.WatchFirebase={async start(){},async readPerformance(){return {members:[{id:"cast-aoi"}]};}};'});
       if(url.endsWith('/native-bridge.js'))return route.fulfill({contentType:'application/javascript',body:''});
       return url.startsWith(origin)?route.continue():route.abort();
     });
@@ -31,11 +31,32 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#timerPresets button').count(),4);
     assert.equal(await page.locator('#openMemberAddButton').isVisible(),false);
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-detail.png')});
+    await page.setViewportSize({width:225,height:225});
+    const presetBoxes=await page.locator('#timerPresets button').evaluateAll(items=>items.map(item=>item.getBoundingClientRect().y));
+    assert.ok(Math.max(...presetBoxes)-Math.min(...presetBoxes)<1,'small watch presets must stay on one row');
+    const reset=await page.locator('#resetTimerButton svg').boundingBox(); assert.ok(reset.width<18,'reset icon must scale with the watch');
+    await page.evaluate(()=>openRouteEditor(controller.state.casts[0]));
+    assert.equal(await page.locator('.route-editor-table-grid').count(),1);
+    assert.equal(await page.locator('.route-choice-floor').count(),10);
+    await page.screenshot({path:path.join(root,'watch-android/preview-isolated-route.png')});
+    await page.evaluate(()=>closeRouteEditor());
+    await page.evaluate(()=>openPerformanceInput(controller.state.casts[0]));
+    await page.waitForFunction(()=>document.querySelectorAll('.performance-row').length===2);
+    const lastStep=await page.locator('.performance-stepper').last().boundingBox();
+    const save=await page.locator('#savePerformance').boundingBox();assert.ok(lastStep.y+lastStep.height<save.y);
+    await page.screenshot({path:path.join(root,'watch-android/preview-isolated-performance.png')});
+    await page.evaluate(()=>closePerformance());
+    await page.evaluate(()=>openTimerDialog());
+    await page.evaluate(()=>setWheelValue('seconds',30,true));
+    assert.equal(await page.locator('#secondWheel .selected').textContent(),'30');
+    await page.screenshot({path:path.join(root,'watch-android/preview-isolated-wheel.png')});
+    await page.evaluate(()=>closeTimerDialog());
+    await page.setViewportSize({width:396,height:396});
     await page.evaluate(()=>openMemberActions(controller.state.casts[0].id));
     const modal=await page.locator('#memberActionsDialog').boundingBox();assert.equal(modal.height,396);
     await page.evaluate(()=>{
       const event=(type,x)=>{const touch=new Touch({identifier:1,target:document.body,clientX:x,clientY:198});document.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[touch],changedTouches:[touch]}));};
-      event('touchstart',5);event('touchmove',160);event('touchend',160);
+      event('touchstart',80);event('touchmove',220);event('touchend',220);
     });
     await page.waitForTimeout(250);assert.equal(await page.locator('#memberActionsDialog').isVisible(),false);
     console.log('Round home/detail geometry and full-screen modal swipe: PASS');

@@ -56,6 +56,14 @@
         return result;
       };
       ready = true;
+      // The watch runs in its own browser storage, so subscribe to the main
+      // roster instead of depending on the management page having been opened.
+      firebase.firestore(app).collection('shared').doc('main').onSnapshot(snapshot => {
+        const directory = snapshot.data()?.state;
+        if (!Array.isArray(directory?.members)) return;
+        localStorage.setItem('member-management-v1', JSON.stringify(directory));
+        onRemote();
+      }, error => console.error('キャスト候補の受信に失敗しました', error));
       ref.onSnapshot(snapshot => {
         if (!snapshot.exists || !ready) return;
         const state = snapshot.data()?.state;
