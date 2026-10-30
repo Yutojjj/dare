@@ -28,6 +28,7 @@ const server=http.createServer((req,res)=>{
     const next=await page.locator('#nextTableAction').boundingBox();
     assert.ok(next.y>340&&next.width>=390,'next-table action must cover the bottom arc');
     assert.equal(await page.locator('#undoMoveButton').isVisible(),true);
+    assert.equal(await page.locator('#timerPresets button').count(),4);
     assert.equal(await page.locator('#openMemberAddButton').isVisible(),false);
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-detail.png')});
     await page.evaluate(()=>openMemberActions(controller.state.casts[0].id));

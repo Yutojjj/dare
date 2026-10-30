@@ -109,7 +109,9 @@ function loadTimerChoices() {
       const saved = JSON.parse(current);
       return Array.isArray(saved) ? [...new Set(saved.filter(value => Number.isInteger(value) && value >= 1 && value <= 240 * 60))].slice(0, 4) : [];
     }
-    const legacy = JSON.parse(storage?.getItem('watchTimerChoices') ?? '[]');
+    const legacyRaw = storage?.getItem('watchTimerChoices');
+    if (legacyRaw == null) return [300, 420, 720];
+    const legacy = JSON.parse(legacyRaw);
     const migrated = Array.isArray(legacy) ? [...new Set(legacy.filter(value => Number.isInteger(value) && value >= 1 && value <= 240).map(minutes => minutes * 60))].slice(0, 4) : [];
     if (migrated.length) storage?.setItem('watchTimerChoicesV2', JSON.stringify(migrated));
     return migrated;
