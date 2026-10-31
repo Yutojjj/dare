@@ -382,3 +382,13 @@ button { color: inherit; font: inherit; touch-action: manipulation; border-radiu
 .performance-stepper button { min-height: 38px; padding: 0; font-size: 22px; border-radius: 0; }
 .performance-stepper output { font-size: 26px; font-weight: bold; color: #f3f5f9; }
 .performance-dialog .timer-dialog-actions { flex-shrink: 0; }
+
+/* Timer editing is opened from the countdown, keeping the main controls clear. */
+button.timer-display { border:0; background:transparent; padding:0; cursor:pointer; }
+.performance-header-button { grid-column:3; grid-row:1; }
+.timer-adjust-backdrop { z-index:3; }
+#timerDialog { z-index:5; }
+.adjust-timer-display { display:block; text-align:center; font-size:32px; font-weight:850; font-variant-numeric:tabular-nums; }
+.timer-adjust-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.timer-adjust-grid button { min-height:55px; border:1px solid var(--watch-line); background:transparent; color:#fff; font-size:22px; }
+.timer-adjust-dialog .timer-presets { margin-top:12px; }

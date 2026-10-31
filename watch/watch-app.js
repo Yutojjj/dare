@@ -585,8 +585,9 @@ function renderTimer(cast) {
   $('timerNotice').hidden = remaining === 0 || !timer?.paused;
   $('timerNotice').textContent = $('timerNotice').hidden ? '' : '一時停止中';
   $('timerControls').hidden = remaining === null;
-  $('timerAdjustActions').hidden = remaining === null;
-  $('timerSubtractActions').hidden = remaining === null;
+  $('adjustTimerDisplay').textContent = display.textContent;
+  $('timerAdjustDialog').querySelectorAll('.timer-adjust-grid button').forEach(button => button.disabled = remaining === null);
+  display.onclick = () => { $('timerAdjustDialog').hidden = false; };
   $('pauseTimerButton').textContent = timer?.paused ? '▶' : 'Ⅱ';
   $('pauseTimerButton').setAttribute('aria-label', timer?.paused ? '再開' : '一時停止');
   $('pauseTimerButton').title = timer?.paused ? '再開' : '一時停止';
@@ -599,7 +600,7 @@ function renderTimer(cast) {
     button.type = 'button';
     button.className = 'timer-preset';
     button.textContent = formatTimerChoice(durationSeconds);
-    button.setAttribute('aria-label', `${formatTimerChoice(durationSeconds)}タイマーを開始`);
+    button.setAttribute('aria-label', `${formatTimerChoice(durationSeconds)}タイマーをセット`);
     button.addEventListener('click', () => startTimerDuration(cast, durationSeconds));
     presets.append(button);
   });
@@ -685,6 +686,7 @@ function startTimerDuration(cast, durationSeconds) {
   if (!controller.startTimerDuration(cast.id, durationSeconds * 1_000)) return;
   controller.pauseTimer(cast.id);
   closeTimerDialog();
+  $('timerAdjustDialog').hidden = true;
   $('watchFace').classList.remove('timer-alert');
   $('watchToast').hidden = true;
   render();
@@ -915,6 +917,7 @@ function render() {
   $('watchFace').classList.toggle('manage-open', managerOpen);
   $('backButton').hidden = !detailOpen && !managerOpen;
   $('openHistoryDialog').hidden = !detailOpen;
+  $('performanceInputButton').hidden = !detailOpen;
   $('manageButton').hidden = detailOpen || managerOpen;
   $('openMemberAddButton').hidden = detailOpen || managerOpen;
   $('nextTableAction').hidden = !detailOpen;
@@ -952,6 +955,7 @@ function render() {
 }
 
 function openCast(castId) {
+  $('timerAdjustDialog').hidden = true;
   selectedCastId = castId;
   managerOpen = false;
   routeEditorOpen = false;
@@ -967,6 +971,7 @@ document.addEventListener('dare-watch-open-cast', () => {
 });
 
 function showHome() {
+  $('timerAdjustDialog').hidden = true;
   selectedCastId = null;
   managerOpen = false;
   routeEditorOpen = false;
@@ -1018,6 +1023,8 @@ $('clearHomeSearch').addEventListener('click', () => {
 const closeHomeControls = () => { $('homeSearchDialog').hidden = true; };
 $('closeHomeSearch').addEventListener('click', closeHomeControls);
 $('homeSearchDialog').addEventListener('click', event => { if (event.target === $('homeSearchDialog')) closeHomeControls(); });
+$('closeTimerAdjust').onclick = () => { $('timerAdjustDialog').hidden = true; };
+$('timerAdjustDialog').addEventListener('click', event => { if (event.target === $('timerAdjustDialog')) $('timerAdjustDialog').hidden = true; });
 $('closeTimerDialog').addEventListener('click', closeTimerDialog);
 $('openHistoryDialog').addEventListener('click', () => {
   historyDialogOpen = true;

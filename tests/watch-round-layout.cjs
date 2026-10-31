@@ -44,13 +44,30 @@ const server=http.createServer((req,res)=>{
     await page.evaluate(()=>openCast(controller.state.casts[0].id));
     const next=await page.locator('#nextTableAction').boundingBox();
     assert.ok(next.y>340&&next.width>=390,'next-table action must cover the bottom arc');
-    assert.equal(await page.locator('#undoMoveButton').isVisible(),true);
+    assert.equal(await page.locator('#undoMoveButton').count(),0);
+    assert.equal(await page.locator('#performanceInputButton').isVisible(),true);
+    assert.equal(await page.locator('#timerPresets').isVisible(),false);
     assert.equal(await page.locator('#timerPresets button').count(),4);
     assert.equal(await page.locator('#openMemberAddButton').isVisible(),false);
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-detail.png')});
     await page.setViewportSize({width:225,height:225});
-    const presetBoxes=await page.locator('#timerPresets button').evaluateAll(items=>items.map(item=>item.getBoundingClientRect().y));
-    assert.ok(Math.max(...presetBoxes)-Math.min(...presetBoxes)<1,'small watch presets must stay on one row');
+    await page.locator('#timerDisplay').click();
+    assert.equal(await page.locator('#timerAdjustDialog').isVisible(),true);
+    const beforeAdjust=await page.evaluate(()=>controller.getRemainingMs(controller.state.casts[0].id));
+    await page.locator('#addOneMinute').click();
+    const afterAdjust=await page.evaluate(()=>controller.getRemainingMs(controller.state.casts[0].id));
+    assert.ok(afterAdjust-beforeAdjust>59000,'modal adjustment must add one minute');
+    for(const width of [225,396]){
+      await page.setViewportSize({width,height:width});
+      const buttons=await page.locator('.timer-adjust-grid button').evaluateAll(items=>items.map(item=>{const r=item.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));
+      assert.ok(buttons.every(b=>b.h>=width*.13&&Math.hypot(b.x-width/2,b.y-width/2)<width/2),'adjust buttons must be large and inside the watch');
+    }
+    await page.screenshot({path:path.join(root,'watch-android/preview-isolated-adjust.png')});
+    await page.evaluate(()=>document.dispatchEvent(new Event('dare-watch-back')));
+    await page.waitForTimeout(230);
+    assert.equal(await page.locator('#timerAdjustDialog').isVisible(),false);
+    assert.equal(await page.locator('#detailScreen').isVisible(),true);
+    await page.setViewportSize({width:225,height:225});
     assert.equal(await page.locator('#resetTimerButton').count(),0);
     const play=await page.locator('#pauseTimerButton').boundingBox(),controlRow=await page.locator('#timerControls').boundingBox();
     assert.ok(Math.abs(play.width-controlRow.width)<1,'play/pause button must fill the entire row');

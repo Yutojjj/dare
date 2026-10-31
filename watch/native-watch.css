@@ -149,3 +149,19 @@
 .native-web .watch-face.home-medium .cast-card-name,
 .native-web .watch-face.home-large .cast-card-name { font-size:3.8cqw; line-height:1.2; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
 
+
+/* Countdown first; adjustments and saved durations live in the timer modal. */
+.native-web .watch-header .performance-header-button { display:grid; }
+.native-web .watch-header .performance-header-button[hidden] { display:none; }
+.native-web .timer-top-group { top:1%; height:43%; }
+.native-web button.timer-display { font-size:19cqw; width:100%; min-height:25cqw; }
+.native-web .timer-controls { top:47%; height:24%; left:8%; right:8%; }
+.native-web .timer-controls button { font-size:12cqw; }
+.native-web .detail-actions { position:static; height:0; margin:0; }
+.native-web .timer-notice { bottom:0; }
+.native-web .timer-adjust-dialog .timer-dialog-header { position:absolute; top:14%; left:18%; right:18%; }
+.native-web .adjust-timer-display { position:absolute; top:26%; left:15%; right:15%; font-size:10cqw; }
+.native-web .timer-adjust-grid { position:absolute; top:42%; left:12%; right:12%; height:31%; gap:2cqw; }
+.native-web .timer-adjust-grid button { min-height:0; padding:0; font-size:5.5cqw; }
+.native-web .timer-adjust-dialog .timer-presets { top:76%; left:16%; right:16%; height:11%; margin:0; gap:1cqw; }
+.native-web .timer-adjust-dialog .timer-presets button { font-size:3.5cqw; }

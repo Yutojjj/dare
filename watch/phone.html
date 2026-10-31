@@ -22,6 +22,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11a8.5 8.5 0 1 1 2.4 6"/><path d="M3.5 4.5V11h6.2"/><path d="M12 7v5l3.2 2"/></svg>
         </button>
         <span class="watch-title" id="watchTitle">付け回し</span>
+        <button class="header-icon-button performance-header-button" id="performanceInputButton" type="button" aria-label="実績を入力" title="実績入力" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4H5v16h15v-9M13 12l7-7-3-3-7 7-1 4 4-1Z"/></svg></button>
         <button class="back-button header-icon-button" id="backButton" type="button" aria-label="一覧に戻る" title="一覧に戻る" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
         </button>
@@ -62,29 +63,30 @@
         <section class="timer-section" aria-label="タイマー">
           <div class="timer-top-group">
             <div class="timer-display-row">
-              <output class="timer-display" id="timerDisplay" aria-live="polite">—:—</output>
-              <div class="timer-adjust-actions timer-adjust-actions-left" id="timerSubtractActions" hidden>
-                <button id="subtractTenSeconds" type="button">−10秒</button>
-                <button id="subtractOneMinute" type="button">−1分</button>
-              </div>
-              <div class="timer-adjust-actions" id="timerAdjustActions" hidden>
-                <button id="addTenSeconds" type="button">＋10秒</button>
-                <button id="addOneMinute" type="button">＋1分</button>
-              </div>
+              <button class="timer-display" id="timerDisplay" type="button" aria-label="時間を調整・設定" aria-haspopup="dialog">—:—</button>
+
             </div>
             <p class="timer-notice" id="timerNotice" role="status" hidden>時間です</p>
           </div>
           <div class="timer-controls" id="timerControls" hidden>
             <button id="pauseTimerButton" type="button" aria-label="一時停止" title="一時停止">Ⅱ</button>
           </div>
-          <div class="timer-presets" id="timerPresets"></div>
           <div class="detail-actions" id="detailActions">
             <button class="next-table-action" id="nextTableAction" type="button" disabled>次の卓へ</button>
-            <button class="undo-action" id="performanceInputButton" type="button">入力</button>
-            <button class="undo-action" id="undoMoveButton" type="button" disabled>⟲ 戻す</button>
           </div>
         </section>
       </main>
+      <div class="timer-dialog-backdrop timer-adjust-backdrop" id="timerAdjustDialog" hidden>
+        <section class="timer-dialog timer-adjust-dialog" role="dialog" aria-modal="true" aria-labelledby="timerAdjustTitle">
+          <header class="timer-dialog-header"><h2 id="timerAdjustTitle">時間を調整</h2><button class="timer-dialog-close" id="closeTimerAdjust" type="button" aria-label="閉じる">×</button></header>
+          <output id="adjustTimerDisplay" class="adjust-timer-display">—:—</output>
+          <div class="timer-adjust-grid">
+            <button id="subtractOneMinute" type="button">−1分</button><button id="addOneMinute" type="button">＋1分</button>
+            <button id="subtractTenSeconds" type="button">−10秒</button><button id="addTenSeconds" type="button">＋10秒</button>
+          </div>
+          <div class="timer-presets" id="timerPresets"></div>
+        </section>
+      </div>
       <div class="timer-dialog-backdrop route-editor-backdrop" id="routeEditorDialog" hidden>
         <section class="timer-dialog route-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="routeEditorTitle">
           <header class="timer-dialog-header">
