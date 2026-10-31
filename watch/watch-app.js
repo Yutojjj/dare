@@ -16,6 +16,8 @@ const startupCache = window.WatchFirebase.cachedState?.();
 if (startupCache) store.state = startupCache;
 let sharedConnected = false;
 let startupMessage = '最新データを確認中…';
+let watchTickHandle = null;
+let lastTickView = '';
 const saveWatchLocally = store.save;
 store.save = state => {
   const result = saveWatchLocally(state);
@@ -446,17 +448,17 @@ function renderRouteEditor() {
   $('routeEditorHint').textContent = isAdding
     ? '卓を押した順に番号が付き、その順で推移します（1卓から追加できます）'
     : '卓を押した順が推移順です。選択を外すと番号が詰まります。';
-  const tables = allWatchTables();
   const choices = $('routeEditorChoices');
+  const previousScroll = choices.scrollTop;
   choices.replaceChildren();
   const compact=document.body.classList.contains('native-web');
   if(compact)$('routeEditorHint').textContent='押した順に番号が付きます';
-  const flatGrid=document.createElement('div'); flatGrid.className='route-editor-table-grid';
-  if(compact)choices.append(flatGrid);
   controller.state.floors.forEach(floor => {
     if (!floor.tables.length) return;
-    if(!compact){const heading = document.createElement('h3'); heading.className = 'route-editor-floor'; heading.textContent = floor.name; choices.append(heading);}
-    const grid = compact?flatGrid:document.createElement('div'); grid.className = 'route-editor-table-grid';
+    const section = document.createElement('section'); section.className = 'route-editor-floor-section';
+    const heading = document.createElement('h3'); heading.className = 'route-editor-floor'; heading.textContent = floor.name;
+    section.append(heading);
+    const grid = document.createElement('div'); grid.className = 'route-editor-table-grid';
     floor.tables.forEach(table => {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'route-editor-choice';
       const order = routeDraft.indexOf(table.id);
@@ -467,7 +469,6 @@ function renderRouteEditor() {
       button.innerHTML = `<span class="route-choice-number">${included ? order + 1 : '＋'}</span><span class="route-choice-name"></span>`;
       button.querySelector('.route-choice-name').textContent = table.name;
       if (isCurrent && !compact) button.querySelector('.route-choice-name').textContent += '（現在）';
-      if(compact){const tag=document.createElement('span');tag.className='route-choice-floor';tag.textContent=floor.name;button.append(tag);}
       button.setAttribute('aria-pressed', String(included));
       button.setAttribute('aria-label', included ? `${order + 1}番目、${floor.name} ${table.name}${isCurrent ? '、現在の卓' : ''}。押すと選択解除` : `${floor.name} ${table.name}を推移卓に追加、${routeDraft.length + 1}番目`);
       button.addEventListener('click', () => {
@@ -478,8 +479,9 @@ function renderRouteEditor() {
       });
       grid.append(button);
     });
-    if(!compact)choices.append(grid);
+    section.append(grid); choices.append(section);
   });
+  choices.scrollTop = previousScroll;
   $('saveRouteEditor').textContent = isAdding ? 'この推移で追加' : '推移を保存';
   $('saveRouteEditor').disabled = routeDraft.length < 1 || (!isAdding && !cast);
 }
@@ -490,6 +492,7 @@ function openRouteEditor(cast = null, candidate = null) {
   routeDraft = candidate ? [] : [...(cast?.nominatedTableIds ?? [])];
   routeEditorOpen = true;
   renderRouteEditor();
+  $('routeEditorChoices').scrollTop = 0;
 }
 
 function defaultRouteDestination(cast, route) {
@@ -1112,9 +1115,10 @@ $('addFloorButton').addEventListener('click', () => {
   renderManager();
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { controller.tick(); render(); }
+  if (!document.hidden) runVisibleWatchTick();
+  scheduleVisibleWatchTick();
 });
-window.addEventListener('focus', () => { controller.tick(); render(); });
+window.addEventListener('focus', () => { if (!document.hidden) runVisibleWatchTick(); });
 window.addEventListener('storage', event => {
   if (event.key !== MEMBER_DIRECTORY_KEY) return;
   appMembers = readAppMembers();
@@ -1282,7 +1286,24 @@ function startWatchScreen() {
   // Wait for the final layout and fonts before revealing the screen. The APK
   // observes removal of this cover and reveals the same completed frame.
   revealWatchScreen();
-  window.setInterval(() => { applyDailyMembers(); checkAdvanceAlerts(); controller.tick(); render(); }, 1_000);
+  scheduleVisibleWatchTick();
+}
+function runVisibleWatchTick() {
+  if (!sharedConnected || document.hidden) return;
+  applyDailyMembers(); checkAdvanceAlerts(); controller.tick();
+  const modalOpen = [...document.querySelectorAll('.timer-dialog-backdrop')].some(dialog => !dialog.hidden);
+  if (!managerOpen && !modalOpen) {
+    const viewKey = `${Math.floor(Date.now()/60000)}|${selectedCastId}|` + controller.state.casts.map(cast => {
+      const remaining = controller.getRemainingMs(cast.id);
+      return `${cast.id}:${remaining===null?'none':Math.ceil(remaining/1000)}:${Boolean(controller.state.timers[cast.id]?.paused)}`;
+    }).join('|');
+    if (viewKey !== lastTickView) { lastTickView = viewKey; render(); }
+  }
+}
+function scheduleVisibleWatchTick() {
+  if (watchTickHandle !== null) { window.clearTimeout(watchTickHandle); watchTickHandle = null; }
+  if (!sharedConnected || document.hidden) return;
+  watchTickHandle = window.setTimeout(() => { watchTickHandle = null; runVisibleWatchTick(); scheduleVisibleWatchTick(); }, 1000);
 }
 if (startupCache) { render(); revealWatchScreen(); }
 let connectTask = null;
@@ -1290,7 +1311,7 @@ function connectWatch() {
   if (sharedConnected || connectTask) return connectTask;
   connectTask = window.WatchFirebase.start(store, () => {
     syncNativeTimers();
-    render();
+    if (!document.hidden) render();
   }).then(startWatchScreen).catch(error => {
     console.error('Firebase共有へ接続できませんでした', error);
     if (startupCache) { startupMessage = '接続待ち・表示のみ'; render(); }

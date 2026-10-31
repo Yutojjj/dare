@@ -26,6 +26,8 @@ public final class WebWatchActivity extends Activity {
     private String page = "";
     private long pausedAt;
     private String pendingCastId;
+    private boolean warmRestored;
+    private long openedAt;
     private static final String HOST = "dare-alpha-ten.vercel.app";
     private boolean trusted(Uri uri) {
         return ("https".equals(uri.getScheme()) && HOST.equals(uri.getHost()) && uri.getPath().startsWith("/watch/"))
@@ -34,6 +36,7 @@ public final class WebWatchActivity extends Activity {
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
+        openedAt=android.os.SystemClock.elapsedRealtime();
         pendingCastId=getIntent().getStringExtra("castId");
         getWindow().getDecorView().setSystemUiVisibility(5894);
         getWindow().setStatusBarColor(Color.BLACK);
@@ -56,7 +59,11 @@ public final class WebWatchActivity extends Activity {
         root.addView(loadingView,new FrameLayout.LayoutParams(-1,-1)); setContentView(root);
         timerNotice=new TimerNoticeView(this);root.addView(timerNotice,new FrameLayout.LayoutParams(-1,-1));
         android.util.Log.i("DareWeb", "create runtime"); if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext()); android.util.Log.i("DareWeb", "runtime ready");
-        session = new GeckoSession();
+        String preview = getIntent().getStringExtra("previewUrl");
+        WarmWatchSession.Entry retained=WarmWatchSession.take(preview);
+        warmRestored=retained!=null;
+        session = warmRestored ? retained.session : new GeckoSession();
+        if(warmRestored){page=retained.page;webCanGoBack=retained.canBack;}
         session.setContentDelegate(new GeckoSession.ContentDelegate() {
             // The first paint can still be the HTML loading screen. Keep the
             // native cover until the page reports that its layout is ready.
@@ -75,7 +82,7 @@ public final class WebWatchActivity extends Activity {
                     Uri origin = Uri.parse(page);
                     if (trusted(origin)) {
                         try {
-                            if ("ready".equals(uri.getHost())) { loadingView.setVisibility(View.GONE); openPendingCast(); }
+                            if ("ready".equals(uri.getHost())) revealReady();
                             if ("test".equals(uri.getHost())) { timers.testNotification(true); android.widget.Toast.makeText(WebWatchActivity.this,"5秒後にテスト通知します",android.widget.Toast.LENGTH_SHORT).show(); }
                             if ("permissions".equals(uri.getHost())) {
                                 if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},20);
@@ -91,29 +98,45 @@ public final class WebWatchActivity extends Activity {
                 return GeckoResult.fromValue(allowed ? AllowOrDeny.ALLOW : AllowOrDeny.DENY);
             }
         });
-        android.util.Log.i("DareWeb", "open session"); session.open(runtime);
+        android.util.Log.i("DareWeb", "open session"); if(!warmRestored)session.open(runtime);
         view.setSession(session);
-        android.util.Log.i("DareWeb", "load page"); String preview = getIntent().getStringExtra("previewUrl");
+        if(warmRestored){bindNavigationPort(retained.port);revealReady();}
+        android.util.Log.i("DareWeb", "load page");
         final String target=preview != null && trusted(Uri.parse(preview)) ? preview : "https://" + HOST + "/watch/index.html?native=gecko";
         runtime.getWebExtensionController().ensureBuiltIn("resource://android/assets/watch-navigation/","watch-navigation@dare.local").accept(extension->{
             if(isFinishing()||isDestroyed())return;
             session.getWebExtensionController().setMessageDelegate(extension,new WebExtension.MessageDelegate(){
                 @Override public void onConnect(WebExtension.Port port){
-                    if(port.sender.session!=session || !port.sender.isTopLevel() || port.sender.url==null || !trusted(Uri.parse(port.sender.url))){port.disconnect();return;}
-                    navigationPort=port;
-                    port.setDelegate(new WebExtension.PortDelegate(){
-                        @Override public void onPortMessage(Object message,WebExtension.Port from){if(message instanceof org.json.JSONObject){org.json.JSONObject state=(org.json.JSONObject)message;webCanGoBack=state.optBoolean("canBack");if(state.optBoolean("ready")){loadingView.setVisibility(View.GONE);openPendingCast();}}}
-                        @Override public void onDisconnect(WebExtension.Port from){if(navigationPort==from){navigationPort=null;webCanGoBack=false;}}
-                    });
+                    bindNavigationPort(port);
                 }
             },"dare_watch_navigation");
-            session.loadUri(target);
-        }, error->{android.util.Log.e("DareWeb","Navigation bridge unavailable",error);if(!isFinishing()&&!isDestroyed())session.loadUri(target);});
+            if(!warmRestored)session.loadUri(target);
+        }, error->{android.util.Log.e("DareWeb","Navigation bridge unavailable",error);if(!isFinishing()&&!isDestroyed()&&!warmRestored)session.loadUri(target);});
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != 0) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 20);
     }
-    @Override protected void onResume() { super.onResume(); NativeTimers.foregroundActive=true;NativeTimers.foregroundAlert=entry->{if(timerNotice!=null)timerNotice.show(entry);};if (session != null) session.setActive(true); if (timers != null) timers.restore(); }
-    @Override protected void onPause() { NativeTimers.foregroundActive=false;NativeTimers.foregroundAlert=null;pausedAt=System.currentTimeMillis(); if (session != null) session.setActive(false); super.onPause(); }
-    @Override protected void onDestroy() { if (session != null) session.close(); super.onDestroy(); }
+    @Override protected void onResume() { super.onResume();BatteryTrace.record(this,"resume"); NativeTimers.foregroundActive=true;NativeTimers.foregroundAlert=entry->{if(timerNotice!=null)timerNotice.show(entry);};if (session != null) session.setActive(true); if (timers != null) timers.restore(); }
+    @Override protected void onPause() { NativeTimers.foregroundActive=false;NativeTimers.foregroundAlert=null;pausedAt=System.currentTimeMillis(); if (session != null) session.setActive(false);BatteryTrace.record(this,"pause"); super.onPause(); }
+    @Override protected void onDestroy() {
+        if(session!=null){
+            GeckoSession closing=session;
+            boolean retain=navigationPort!=null&&loadingView.getVisibility()!=View.VISIBLE&&page.startsWith("https://"+HOST+"/watch/");
+            if(browserView!=null)browserView.releaseSession();
+            if(retain){closing.setActive(false);WarmWatchSession.keep(this,new WarmWatchSession.Entry(closing,navigationPort,page,webCanGoBack));}
+            else closing.close();
+            session=null;navigationPort=null;
+        }
+        super.onDestroy();
+    }
+    private void revealReady(){if(loadingView.getVisibility()!=View.GONE)android.util.Log.i("DareWeb","Visible in "+(android.os.SystemClock.elapsedRealtime()-openedAt)+"ms warm="+warmRestored);loadingView.setVisibility(View.GONE);openPendingCast();}
+    private void bindNavigationPort(WebExtension.Port port){
+        if(port==null)return;
+        if(port.sender.session!=session || !port.sender.isTopLevel() || port.sender.url==null || !trusted(Uri.parse(port.sender.url))){port.disconnect();return;}
+        navigationPort=port;
+        port.setDelegate(new WebExtension.PortDelegate(){
+            @Override public void onPortMessage(Object message,WebExtension.Port from){if(message instanceof org.json.JSONObject){org.json.JSONObject state=(org.json.JSONObject)message;webCanGoBack=state.optBoolean("canBack");if(state.optBoolean("ready"))revealReady();}}
+            @Override public void onDisconnect(WebExtension.Port from){if(navigationPort==from){navigationPort=null;webCanGoBack=false;}WarmWatchSession.forgetPort(from);}
+        });
+    }
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
         if(browserView==null)return super.dispatchTouchEvent(event);
         int action=event.getActionMasked();

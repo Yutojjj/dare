@@ -94,12 +94,14 @@
 .native-web .performance-stepper button { min-height:0; height:10cqw; font-size:5cqw; border:1px solid var(--watch-line); background:transparent; color:inherit; }
 .native-web .performance-stepper output { font-size:6.5cqw; }
 .native-web .route-editor-hint { position:absolute; top:24%; left:12%; right:12%; font-size:2.7cqw; margin:0; line-height:1; }
-.native-web .route-editor-choices { position:absolute; top:28%; bottom:31%; left:12%; right:12%; }
-.native-web .route-editor-table-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:1cqw; }
-.native-web .route-editor-choice { position:relative; min-height:0; height:9cqw; justify-content:center; gap:1cqw; padding:2.3cqw 1cqw 0; }
+.native-web .route-editor-choices { position:absolute; top:29%; bottom:29%; left:12%; right:12%; padding-bottom:3cqw; }
+.native-web .route-editor-floor { position:sticky; top:0; z-index:1; margin:0 0 2cqw; padding:2cqw 1cqw; color:#fff; font-size:4.5cqw; background:#101318; border-bottom:1px solid var(--watch-line); }
+.native-web .route-editor-floor-section + .route-editor-floor-section { margin-top:4cqw; }
+.native-web .route-editor-table-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:2cqw; }
+.native-web .route-editor-choice { position:relative; min-height:15cqw; height:auto; justify-content:flex-start; gap:2cqw; padding:2cqw; }
 .native-web .route-choice-floor { position:absolute; top:.3cqw; left:1cqw; font-size:1.8cqw; color:#aab3c1; }
-.native-web .route-choice-number { width:auto; height:auto; min-width:3cqw; flex-basis:auto; font-size:3cqw; border:0; background:transparent!important; color:inherit!important; }
-.native-web .route-choice-name { font-size:3.2cqw; }
+.native-web .route-choice-number { width:7cqw; height:7cqw; min-width:7cqw; flex-basis:7cqw; font-size:4.5cqw; border:0; background:transparent!important; color:inherit!important; }
+.native-web .route-choice-name { font-size:5cqw; white-space:normal; overflow-wrap:anywhere; text-overflow:clip; }
 .native-web .member-picker-dialog .timer-dialog-header { grid-template-columns:minmax(0,1fr) auto; gap:1cqw; }
 .native-web .member-picker-dialog h2 { font-size:4cqw; }
 .native-web .member-day-filter-toggle { min-height:9cqw; font-size:2.8cqw; padding:0 2cqw; }

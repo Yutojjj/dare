@@ -26,7 +26,7 @@ const server=http.createServer((req,res)=>{
           window.__writes=[];
           firebase.firestore=()=>({collection:()=>({doc:name=>({
             get:()=>new Promise((resolve,reject)=>{window.__acceptRemote=state=>resolve({exists:true,data:()=>({state})});window.__rejectRemote=()=>reject(new Error('offline'));}),
-            set:value=>{window.__writes.push(value);return Promise.resolve();},onSnapshot:()=>()=>{}
+            set:value=>{window.__writes.push(value);return Promise.resolve();},onSnapshot:callback=>{if(name==='watch')window.__watchSnapshot=callback;return()=>{};}
           })})});firebase.firestore.FieldValue={serverTimestamp:()=>0};
         `});
         if(url.endsWith('native-bridge.js'))return route.fulfill({contentType:'application/javascript',body:'window.__nativeSync=[];window.DareWatchNative={syncTimers:raw=>window.__nativeSync.push(JSON.parse(raw))};'});
@@ -57,6 +57,25 @@ const server=http.createServer((req,res)=>{
       await page.waitForFunction(()=>!document.getElementById('watchBoot')&&!document.getElementById('watchFace').inert);
       assert.match(await page.locator('#homeScreen').innerText(),/最新の一覧/);
       assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('watch-confirmed-state-v1')).casts[0].name),'最新の一覧');
+      if(cached){
+        const power=await page.evaluate(()=>{
+          const now=Date.now();Date.now=()=>now;
+          window.__renders=0;const original=render;render=(...args)=>{window.__renders++;return original(...args);};
+          lastTickView='';runVisibleWatchTick();runVisibleWatchTick();
+          const idleRenders=window.__renders;
+          window.__hidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.__hidden});
+          document.dispatchEvent(new Event('visibilitychange'));runVisibleWatchTick();
+          const suspended=watchTickHandle===null, beforeNative=window.__nativeSync.length;
+          const incoming=structuredClone(controller.state);incoming.timers['cast-aoi'].endsAt+=10000;
+          window.__watchSnapshot({exists:true,data:()=>({state:incoming}),metadata:{hasPendingWrites:false}});
+          return {idleRenders,suspended,hiddenRenders:window.__renders-idleRenders,nativeUpdated:window.__nativeSync.length>beforeNative,deadline:window.__nativeSync.at(-1).timers['cast-aoi'].endsAt,expected:incoming.timers['cast-aoi'].endsAt};
+        });
+        assert.equal(power.idleRenders,1,'an unchanged timer frame must not repaint repeatedly');
+        assert.equal(power.suspended,true,'hidden screen must have no UI polling timeout');
+        assert.equal(power.hiddenRenders,0,'remote changes must not paint a hidden screen');
+        assert.equal(power.nativeUpdated,true,'remote timer changes must still reach native alarms while hidden');
+        assert.equal(power.deadline,power.expected);
+      }
       await page.close();
     }
     console.log('Cached screen before network, first-launch loading, edit lock and server reconciliation: PASS');

@@ -10,6 +10,7 @@
   let ready = false, applyingRemote = false;
   const CONFIRMED_KEY = 'watch-confirmed-state-v1';
   let sdkTask;
+  let database, persistenceStarted = false;
   function ensureFirebase() {
     if (typeof firebase !== 'undefined' && firebase.firestore) return Promise.resolve();
     if (!sdkTask) {
@@ -66,7 +67,12 @@
     async start(store, onRemote) {
       await ensureFirebase();
       const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
-      const ref = firebase.firestore(app).collection('shared').doc('watch');
+      database = firebase.firestore(app);
+      if (!persistenceStarted && database.enablePersistence) {
+        persistenceStarted = true;
+        await database.enablePersistence({ synchronizeTabs: true }).catch(error => console.warn('ローカル保存を利用できません', error));
+      }
+      const ref = database.collection('shared').doc('watch');
       const local = store.state;
       const first = await ref.get();
       if (first.exists && first.data()?.state?.version === 2) {

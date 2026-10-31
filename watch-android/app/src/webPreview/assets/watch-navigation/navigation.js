@@ -14,7 +14,11 @@
     if (canBack !== previous || ready !== previousReady) { previous = canBack; previousReady = ready; port.postMessage({ canBack, ready }); }
   };
   const observe = () => {
-    new MutationObserver(update).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});
+    new MutationObserver(records => {
+      if (!records?.length || records.some(record =>
+        (record.type === 'childList' && !previousReady) ||
+        (record.type === 'attributes' && record.target.matches('.timer-dialog-backdrop,#detailScreen,#manageScreen')))) update();
+    }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});
     update();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',observe,{once:true});

@@ -160,6 +160,7 @@ public final class NativeTimers {
         if(foreground&&vibration)vibrate(600);
         prefs().edit().putString("lastDelivery",message).putLong("lastDeliveryAt",System.currentTimeMillis()).apply();
         android.util.Log.i("DareTimers","Delivered " + id + " vibration="+vibration+" foreground="+foreground);
+        BatteryTrace.record(context,"alert");
     }
 }
 
