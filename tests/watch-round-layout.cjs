@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{
     await page.route('**/*',route=>{
       const url=route.request().url();
       if(url.endsWith('/watch-firebase.js'))return route.fulfill({contentType:'application/javascript',body:'window.WatchFirebase={async start(){},async readPerformance(){return {members:[{id:"cast-aoi"}]};}};'});
-      if(url.endsWith('/native-bridge.js'))return route.fulfill({contentType:'application/javascript',body:''});
+      if(url.endsWith('/native-bridge.js'))return route.fulfill({contentType:'application/javascript',body:'window.__nativeSync=[];window.DareWatchNative={syncTimers:raw=>window.__nativeSync.push(JSON.parse(raw))};'});
       return url.startsWith(origin)?route.continue():route.abort();
     });
     await page.goto(origin+'/watch/index.html');
@@ -54,10 +54,13 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#resetTimerButton').count(),0);
     const play=await page.locator('#pauseTimerButton').boundingBox(),controlRow=await page.locator('#timerControls').boundingBox();
     assert.ok(Math.abs(play.width-controlRow.width)<1,'play/pause button must fill the entire row');
+    await page.evaluate(()=>{window.__nativeSync=[];});
     await page.locator('#pauseTimerButton').click();
     assert.equal(await page.locator('#pauseTimerButton').getAttribute('aria-label'),'再開');
+    assert.equal(await page.evaluate(()=>window.__nativeSync.at(-1).timers['cast-aoi'].paused),true,'pause must immediately reach native alarms without a remote callback');
     await page.locator('#pauseTimerButton').click();
     assert.equal(await page.locator('#pauseTimerButton').getAttribute('aria-label'),'一時停止');
+    assert.equal(await page.evaluate(()=>window.__nativeSync.at(-1).timers['cast-aoi'].paused),false,'resume must immediately reach native alarms without a remote callback');
     await page.evaluate(()=>openRouteEditor(controller.state.casts[0]));
     assert.equal(await page.locator('.route-editor-table-grid').count(),1);
     assert.equal(await page.locator('.route-choice-floor').count(),10);

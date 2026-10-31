@@ -16,6 +16,17 @@ const startupCache = window.WatchFirebase.cachedState?.();
 if (startupCache) store.state = startupCache;
 let sharedConnected = false;
 let startupMessage = '最新データを確認中…';
+const saveWatchLocally = store.save;
+store.save = state => {
+  const result = saveWatchLocally(state);
+  // Reserve the native alarm directly from an accepted local operation. The
+  // Firestore listener may arrive later, particularly over the phone connection.
+  if (sharedConnected) syncNativeTimers(state);
+  return result;
+};
+function syncNativeTimers(state = controller.state) {
+  window.DareWatchNative?.syncTimers(JSON.stringify({ ...state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
+}
 const HOME_VIEW_KEY = 'watch-home-view-v2';
 const savedHomeView = readHomeViewSettings();
 let selectedCastId = null;
@@ -1185,7 +1196,7 @@ $('saveDayRolloverDial').onclick = () => {
 document.addEventListener('keydown', event => { if(event.key==='Escape')closeDayRolloverDial(); });
 function saveAlertSettings() {
   try { storage?.setItem(ALERT_SETTINGS_KEY, JSON.stringify(alertSettings)); } catch {}
-  if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
+  syncNativeTimers();
 }
 for (const id of ['endAlertEnabled', 'alertVibrationEnabled']) {
   $(id).addEventListener('change', () => {
@@ -1278,7 +1289,7 @@ let connectTask = null;
 function connectWatch() {
   if (sharedConnected || connectTask) return connectTask;
   connectTask = window.WatchFirebase.start(store, () => {
-    if (window.DareWatchNative) window.DareWatchNative.syncTimers(JSON.stringify({ ...controller.state, notificationSettings: alertSettings, dayRolloverTime: rolloverTime }));
+    syncNativeTimers();
     render();
   }).then(startWatchScreen).catch(error => {
     console.error('Firebase共有へ接続できませんでした', error);

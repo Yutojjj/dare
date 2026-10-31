@@ -43,10 +43,28 @@ public final class NativeTimers {
     private void schedule(String id, long end) {
         AlarmManager manager = context.getSystemService(AlarmManager.class);
         long trigger = Math.max(System.currentTimeMillis() + 100, end);
-        if (Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms())
-            manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarm(id));
-        else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarm(id));
-        android.util.Log.i("DareTimers", "Scheduled " + id + " at " + trigger);
+        boolean exact = Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms();
+        if (exact) {
+            // These are explicitly selected, user-visible countdown alarms.
+            // Allow-while-idle alarms are rate limited while asleep, which can
+            // delay a 30-second warning followed by the actual timer expiry.
+            Intent launch = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            if (launch == null) launch = new Intent(context, MainActivity.class);
+            launch.putExtra("castId", id.split("\\|", 2)[0]);
+            PendingIntent show = PendingIntent.getActivity(context, 10, launch,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            try {
+                manager.setAlarmClock(new AlarmManager.AlarmClockInfo(trigger, show), alarm(id));
+            } catch (SecurityException revoked) {
+                exact = false;
+                android.util.Log.w("DareTimers", "Exact alarm permission revoked; notification may be delayed", revoked);
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarm(id));
+            }
+        } else {
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, alarm(id));
+        }
+        prefs().edit().putBoolean("exactAlarmAllowed", exact).apply();
+        android.util.Log.i("DareTimers", "Scheduled " + id + " at " + trigger + " mode=" + (exact ? "alarm-clock" : "inexact"));
     }
     public void syncTimers(String raw) { synchronized (LOCK) { sync(raw); } }
     private void sync(String raw) {

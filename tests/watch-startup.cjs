@@ -29,7 +29,7 @@ const server=http.createServer((req,res)=>{
             set:value=>{window.__writes.push(value);return Promise.resolve();},onSnapshot:()=>()=>{}
           })})});firebase.firestore.FieldValue={serverTimestamp:()=>0};
         `});
-        if(url.endsWith('native-bridge.js'))return route.fulfill({contentType:'application/javascript',body:''});
+        if(url.endsWith('native-bridge.js'))return route.fulfill({contentType:'application/javascript',body:'window.__nativeSync=[];window.DareWatchNative={syncTimers:raw=>window.__nativeSync.push(JSON.parse(raw))};'});
         return url.startsWith(origin)?route.continue():route.abort();
       });
       await page.goto(origin+'/watch/index.html',{waitUntil:'domcontentloaded'});
@@ -44,6 +44,7 @@ const server=http.createServer((req,res)=>{
       }else assert.equal(await page.locator('#watchBoot').count(),1);
       await page.waitForFunction(()=>typeof window.__acceptRemote==='function');
       assert.deepEqual(await page.evaluate(()=>window.__writes),[],'cached display must never be uploaded during startup');
+      assert.deepEqual(await page.evaluate(()=>window.__nativeSync),[],'unconfirmed cached timers must never be reserved as new alarms');
       if(cached){
         await page.evaluate(()=>window.__rejectRemote());
         await page.waitForFunction(()=>document.getElementById('openMemberAddButton').textContent==='接続待ち・表示のみ');
