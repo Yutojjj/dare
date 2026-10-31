@@ -42,6 +42,21 @@ const server=http.createServer((req,res)=>{
     assert.ok(wrapped.nameBottom<=wrapped.rowBottom+1,'long names must expand the row instead of overlapping the next member');
     await page.evaluate(()=>{homeCardSize='small';render();});
     await page.evaluate(()=>openCast(controller.state.casts[0].id));
+    for(const width of [225,396]){
+      await page.setViewportSize({width,height:width});
+      for(const id of ['openHistoryDialog','performanceInputButton']){
+        const hit=await page.locator('#'+id).evaluate(el=>{const r=el.getBoundingClientRect();const target=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return el.contains(target);});
+        assert.ok(hit,id+' must receive taps without an invisible overlay');
+      }
+      await page.locator('#openHistoryDialog').tap();
+      assert.equal(await page.locator('#historyDialog').isVisible(),true);
+      await page.evaluate(()=>closeHistoryDialog());
+      await page.locator('#performanceInputButton').tap();
+      await page.waitForFunction(()=>document.querySelectorAll('.performance-row').length===2);
+      assert.equal(await page.locator('#performanceDialog').isVisible(),true);
+      await page.evaluate(()=>closePerformance());
+    }
+    await page.setViewportSize({width:396,height:396});
     const next=await page.locator('#nextTableAction').boundingBox();
     assert.ok(next.y>340&&next.width>=390,'next-table action must cover the bottom arc');
     assert.equal(await page.locator('#undoMoveButton').count(),0);

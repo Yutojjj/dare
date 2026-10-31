@@ -390,3 +390,5 @@ button.timer-display { border:0; background:transparent; padding:0; cursor:point
 #timerDialog { z-index:5; }
 .adjust-timer-display { display:block; text-align:center; font-size:32px; font-weight:850; font-variant-numeric:tabular-nums; }
 .timer-adjust-dialog .timer-presets { margin-top:12px; }
+/* Home controls must not leave an invisible hit area over detail header buttons. */
+.watch-face:not(.home-open) .home-toolbar { display:none; }
