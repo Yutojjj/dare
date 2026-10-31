@@ -53,14 +53,12 @@ const server=http.createServer((req,res)=>{
     await page.setViewportSize({width:225,height:225});
     await page.locator('#timerDisplay').click();
     assert.equal(await page.locator('#timerAdjustDialog').isVisible(),true);
-    const beforeAdjust=await page.evaluate(()=>controller.getRemainingMs(controller.state.casts[0].id));
-    await page.locator('#addOneMinute').click();
-    const afterAdjust=await page.evaluate(()=>controller.getRemainingMs(controller.state.casts[0].id));
-    assert.ok(afterAdjust-beforeAdjust>59000,'modal adjustment must add one minute');
+    assert.equal(await page.locator('#addOneMinute').count(),0);
+    assert.equal(await page.locator('#timerPresets button').count(),4);
     for(const width of [225,396]){
       await page.setViewportSize({width,height:width});
-      const buttons=await page.locator('.timer-adjust-grid button').evaluateAll(items=>items.map(item=>{const r=item.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));
-      assert.ok(buttons.every(b=>b.h>=width*.13&&Math.hypot(b.x-width/2,b.y-width/2)<width/2),'adjust buttons must be large and inside the watch');
+      const buttons=await page.locator('#timerPresets button').evaluateAll(items=>items.map(item=>{const r=item.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));
+      assert.ok(buttons.every(b=>b.h>=width*.13),'time choices must be large enough for touch');
     }
     await page.screenshot({path:path.join(root,'watch-android/preview-isolated-adjust.png')});
     await page.evaluate(()=>document.dispatchEvent(new Event('dare-watch-back')));

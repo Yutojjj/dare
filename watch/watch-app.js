@@ -586,7 +586,6 @@ function renderTimer(cast) {
   $('timerNotice').textContent = $('timerNotice').hidden ? '' : '一時停止中';
   $('timerControls').hidden = remaining === null;
   $('adjustTimerDisplay').textContent = display.textContent;
-  $('timerAdjustDialog').querySelectorAll('.timer-adjust-grid button').forEach(button => button.disabled = remaining === null);
   display.onclick = () => { $('timerAdjustDialog').hidden = false; };
   $('pauseTimerButton').textContent = timer?.paused ? '▶' : 'Ⅱ';
   $('pauseTimerButton').setAttribute('aria-label', timer?.paused ? '再開' : '一時停止');
@@ -676,10 +675,6 @@ function renderTimer(cast) {
     $('watchToast').hidden = true;
     render();
   };
-  $('addTenSeconds').onclick = () => addTimeToTimer(cast, 10_000);
-  $('addOneMinute').onclick = () => addTimeToTimer(cast, 60_000);
-  $('subtractTenSeconds').onclick = () => addTimeToTimer(cast, -10_000);
-  $('subtractOneMinute').onclick = () => addTimeToTimer(cast, -60_000);
 }
 
 function startTimerDuration(cast, durationSeconds) {

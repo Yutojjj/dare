@@ -389,6 +389,4 @@ button.timer-display { border:0; background:transparent; padding:0; cursor:point
 .timer-adjust-backdrop { z-index:3; }
 #timerDialog { z-index:5; }
 .adjust-timer-display { display:block; text-align:center; font-size:32px; font-weight:850; font-variant-numeric:tabular-nums; }
-.timer-adjust-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.timer-adjust-grid button { min-height:55px; border:1px solid var(--watch-line); background:transparent; color:#fff; font-size:22px; }
 .timer-adjust-dialog .timer-presets { margin-top:12px; }
